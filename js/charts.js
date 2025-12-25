@@ -1,51 +1,50 @@
 /**
  * Charts Module
- * Renders interactive charts using Chart.js
+ * Enhanced with Axes and Formatting
  */
-
 let chartInstance = null;
 
 export function renderChart(canvasId, rawData) {
-    const ctx = document.getElementById(canvasId).getContext('2d');
+    const canvas = document.getElementById(canvasId);
+    if (!canvas) return;
     
-    // Daten vorbereiten
+    const ctx = canvas.getContext('2d');
     const timestamps = rawData.timestamp;
     const prices = rawData.indicators.quote[0].close;
-    
-    // Labels (Datum) formatieren
+    const currency = rawData.meta.currency || ''; // Währung aus Metadaten (z.B. USD, EUR)
+
+    // Labels formatieren (Datum)
     const labels = timestamps.map(t => {
         const date = new Date(t * 1000);
-        return date.toLocaleDateString();
+        return date; // Wir geben das Date Object weiter, Chart.js formatiert es besser via Callback
     });
 
-    // Alte Chart-Instanz zerstören, falls vorhanden (sonst flackert es)
     if (chartInstance) {
         chartInstance.destroy();
     }
 
-    // Farben basierend auf Trend (Erster vs Letzter Preis)
+    // Farben
     const startPrice = prices[0];
     const endPrice = prices[prices.length - 1];
     const isBullish = endPrice >= startPrice;
     
-    const lineColor = isBullish ? '#22c55e' : '#ef4444'; // Green-500 : Red-500
-    const areaColor = isBullish ? 'rgba(34, 197, 94, 0.1)' : 'rgba(239, 68, 68, 0.1)';
+    const lineColor = isBullish ? '#22c55e' : '#ef4444'; // Green vs Red
+    const gradientColor = isBullish ? 'rgba(34, 197, 94, 0.1)' : 'rgba(239, 68, 68, 0.1)';
 
-    // Chart Konfiguration
     chartInstance = new Chart(ctx, {
         type: 'line',
         data: {
-            labels: labels,
+            labels: labels, // Date Objects
             datasets: [{
                 label: 'Price',
                 data: prices,
                 borderColor: lineColor,
-                backgroundColor: areaColor,
+                backgroundColor: gradientColor,
                 borderWidth: 2,
-                pointRadius: 0, // Keine Punkte für cleanen Look
-                pointHoverRadius: 4,
+                pointRadius: 0,
+                pointHoverRadius: 6,
                 fill: true,
-                tension: 0.1 // Leichte Kurve
+                tension: 0.1
             }]
         },
         options: {
@@ -58,27 +57,44 @@ export function renderChart(canvasId, rawData) {
             plugins: {
                 legend: { display: false },
                 tooltip: {
-                    mode: 'index',
-                    intersect: false,
-                    backgroundColor: 'rgba(15, 23, 42, 0.9)',
-                    titleColor: '#fff',
-                    bodyColor: '#fff',
-                    borderColor: 'rgba(255,255,255,0.1)',
-                    borderWidth: 1
+                    callbacks: {
+                        label: function(context) {
+                            return ` ${context.parsed.y.toFixed(2)} ${currency}`;
+                        }
+                    }
                 }
             },
             scales: {
                 x: {
-                    display: false, // Keine X-Achse Beschriftung (cleaner)
-                    grid: { display: false }
-                },
-                y: {
-                    position: 'right',
+                    display: true, // X-Achse anzeigen
                     grid: {
-                        color: 'rgba(200, 200, 200, 0.1)'
+                        display: false,
+                        drawBorder: false
                     },
                     ticks: {
-                        color: '#94a3b8' // Slate-400
+                        color: '#94a3b8', // Slate-400
+                        maxTicksLimit: 6, // Nicht zu viele Labels
+                        callback: function(val, index) {
+                            // Intelligente Datumsformatierung
+                            const date = this.getLabelForValue(val);
+                            // Da labels hier Date-Objects sind (oder timestamps), formatieren wir sie kurz
+                            const d = new Date(labels[index]); 
+                            return d.toLocaleDateString(undefined, { month: 'short', year: '2-digit' });
+                        }
+                    }
+                },
+                y: {
+                    display: true, // Y-Achse anzeigen
+                    position: 'right',
+                    grid: {
+                        color: 'rgba(200, 200, 200, 0.1)',
+                        borderDash: [5, 5]
+                    },
+                    ticks: {
+                        color: '#94a3b8',
+                        callback: function(value) {
+                            return value.toFixed(1) + ' ' + currency; // Z.B. "150.5 USD"
+                        }
                     }
                 }
             }

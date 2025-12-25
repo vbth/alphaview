@@ -1,6 +1,6 @@
 /**
  * AlphaView Main Controller
- * Step 5: Full App with Charts
+ * Step 6: Interactive Time Ranges
  */
 import { initTheme, toggleTheme } from './theme.js';
 import { fetchChartData, searchSymbol } from './api.js';
@@ -11,7 +11,9 @@ import { renderChart } from './charts.js';
 
 // Global State
 const state = {
-    searchDebounce: null
+    searchDebounce: null,
+    currentSymbol: null, // Für Modal State
+    currentRange: '1y'   // Default Range
 };
 
 // DOM Elements
@@ -22,35 +24,84 @@ const themeBtn = document.getElementById('theme-toggle');
 const modal = document.getElementById('chart-modal');
 const modalSymbol = document.getElementById('modal-symbol');
 const closeModalBtns = [document.getElementById('close-modal'), document.getElementById('close-modal-btn')];
+const rangeBtns = document.querySelectorAll('.chart-range-btn');
 
-// --- MODAL LOGIC ---
+// --- MODAL & CHART LOGIC ---
+
 function openModal(symbol) {
     if(!modal) return;
+    state.currentSymbol = symbol;
+    state.currentRange = '1y'; // Reset auf Default beim Öffnen
+    
     modalSymbol.textContent = symbol;
     modal.classList.remove('hidden');
     
+    // Buttons resetten (1Y aktiv setzen)
+    updateRangeButtonsUI('1y');
+
     // Chart laden
-    loadChartForModal(symbol);
+    loadChartForModal(symbol, '1y');
 }
 
 function closeModal() {
     if(modal) modal.classList.add('hidden');
+    state.currentSymbol = null;
 }
 
-async function loadChartForModal(symbol) {
+// UI Helfer für Buttons
+function updateRangeButtonsUI(activeRange) {
+    rangeBtns.forEach(btn => {
+        const range = btn.dataset.range;
+        // Styles zurücksetzen
+        btn.classList.remove('bg-white', 'dark:bg-slate-600', 'text-primary', 'dark:text-white', 'shadow-sm');
+        btn.classList.add('text-slate-600', 'dark:text-slate-400', 'hover:bg-white');
+        
+        // Active Style setzen
+        if(range === activeRange) {
+            btn.classList.remove('text-slate-600', 'dark:text-slate-400', 'hover:bg-white');
+            btn.classList.add('bg-white', 'dark:bg-slate-600', 'text-primary', 'dark:text-white', 'shadow-sm');
+        }
+    });
+}
+
+async function loadChartForModal(symbol, range) {
     const canvasId = 'main-chart';
+    
+    // Kleiner visueller Indikator, dass geladen wird (Opazität)
+    const canvas = document.getElementById(canvasId);
+    if(canvas) canvas.style.opacity = '0.5';
+
     try {
-        // Daten holen (1 Jahr)
-        const rawData = await fetchChartData(symbol, '1y', '1d');
+        // Interval Logik: Bei 1M/6M nehmen wir 1d, bei 5Y/MAX nehmen wir 1wk oder 1mo für Speed
+        let interval = '1d';
+        if (range === '5y' || range === 'max') interval = '1wk';
+
+        const rawData = await fetchChartData(symbol, range, interval);
+        
         if(rawData) {
             renderChart(canvasId, rawData);
         }
     } catch (e) {
         console.error("Chart load failed", e);
+    } finally {
+        if(canvas) canvas.style.opacity = '1';
     }
 }
 
-// --- CORE LOGIC ---
+// Event Listener für Range Buttons
+rangeBtns.forEach(btn => {
+    btn.addEventListener('click', () => {
+        if(!state.currentSymbol) return;
+        const range = btn.dataset.range;
+        
+        state.currentRange = range;
+        updateRangeButtonsUI(range);
+        loadChartForModal(state.currentSymbol, range);
+    });
+});
+
+
+// --- CORE LOGIC (Watchlist & Search) ---
 
 function updateThemeIcon(mode) {
     const icon = themeBtn.querySelector('i');
@@ -69,7 +120,7 @@ async function loadDashboard() {
     const gridEl = document.getElementById('dashboard-grid');
     const emptyStateEl = document.getElementById('empty-state');
 
-    if (!gridEl) return; // Sicherheitscheck
+    if (!gridEl) return;
 
     if (watchlist.length === 0) {
         gridEl.innerHTML = '';
@@ -105,10 +156,9 @@ async function loadDashboard() {
 }
 
 function attachDashboardEvents() {
-    // Delete Events
     document.querySelectorAll('.delete-btn').forEach(btn => {
         btn.addEventListener('click', (e) => {
-            e.stopPropagation(); // Stoppt Klick zum Modal
+            e.stopPropagation();
             const sym = e.currentTarget.dataset.symbol;
             if(confirm(`${sym} entfernen?`)) {
                 removeSymbol(sym);
@@ -117,12 +167,9 @@ function attachDashboardEvents() {
         });
     });
 
-    // Card Click Events (Open Modal)
     document.querySelectorAll('.stock-card').forEach(card => {
         card.addEventListener('click', (e) => {
-            // Wenn wir den Delete-Button getroffen haben, abbrechen
             if(e.target.closest('.delete-btn')) return;
-            
             const sym = e.currentTarget.dataset.symbol;
             openModal(sym);
         });
@@ -173,8 +220,6 @@ function initSearch() {
 
 // APP START
 document.addEventListener('DOMContentLoaded', async () => {
-    console.log('App v5 init');
-    
     // Theme
     const currentTheme = initTheme();
     updateThemeIcon(currentTheme);
@@ -184,5 +229,18 @@ document.addEventListener('DOMContentLoaded', async () => {
         });
     }
 
-    // UI Structure
+    // UI
     renderAppSkeleton(rootEl);
+    
+    // Modal Events
+    closeModalBtns.forEach(btn => btn?.addEventListener('click', closeModal));
+    if(modal) {
+        modal.addEventListener('click', (e) => {
+            if(e.target === modal) closeModal();
+        });
+    }
+
+    // Init
+    initSearch();
+    loadDashboard();
+});
