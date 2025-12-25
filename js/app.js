@@ -11,8 +11,7 @@ import { renderChart } from './charts.js';
 
 // Global State
 const state = {
-    searchDebounce: null,
-    cache: {} // Einfacher Runtime Cache für Chart-Daten
+    searchDebounce: null
 };
 
 // DOM Elements
@@ -26,23 +25,22 @@ const closeModalBtns = [document.getElementById('close-modal'), document.getElem
 
 // --- MODAL LOGIC ---
 function openModal(symbol) {
+    if(!modal) return;
     modalSymbol.textContent = symbol;
     modal.classList.remove('hidden');
     
-    // Daten holen (aus Cache oder API)
-    // Wir holen für den Chart mehr Daten (1 Jahr) falls im Dashboard nur weniger geladen wurden
+    // Chart laden
     loadChartForModal(symbol);
 }
 
 function closeModal() {
-    modal.classList.add('hidden');
+    if(modal) modal.classList.add('hidden');
 }
 
 async function loadChartForModal(symbol) {
     const canvasId = 'main-chart';
-    // Zeige Ladezustand im Canvas? Vorerst lassen wir Chart.js animieren
-    
     try {
+        // Daten holen (1 Jahr)
         const rawData = await fetchChartData(symbol, '1y', '1d');
         if(rawData) {
             renderChart(canvasId, rawData);
@@ -71,20 +69,22 @@ async function loadDashboard() {
     const gridEl = document.getElementById('dashboard-grid');
     const emptyStateEl = document.getElementById('empty-state');
 
+    if (!gridEl) return; // Sicherheitscheck
+
     if (watchlist.length === 0) {
         gridEl.innerHTML = '';
-        emptyStateEl.classList.remove('hidden');
+        if(emptyStateEl) emptyStateEl.classList.remove('hidden');
         return;
     }
 
-    emptyStateEl.classList.add('hidden');
+    if(emptyStateEl) emptyStateEl.classList.add('hidden');
+    
     if(!gridEl.hasChildNodes()) {
         gridEl.innerHTML = '<div class="col-span-full text-center text-slate-400 py-8 animate-pulse">Lade Kurse...</div>';
     }
 
     const promises = watchlist.map(async (symbol) => {
         try {
-            // Für Dashboard reicht 1y auch, damit Analysis stimmt
             const rawData = await fetchChartData(symbol, '1y', '1d');
             if (!rawData) return null;
             return analyze(rawData);
@@ -105,10 +105,10 @@ async function loadDashboard() {
 }
 
 function attachDashboardEvents() {
-    // Delete
+    // Delete Events
     document.querySelectorAll('.delete-btn').forEach(btn => {
         btn.addEventListener('click', (e) => {
-            e.stopPropagation();
+            e.stopPropagation(); // Stoppt Klick zum Modal
             const sym = e.currentTarget.dataset.symbol;
             if(confirm(`${sym} entfernen?`)) {
                 removeSymbol(sym);
@@ -117,10 +117,12 @@ function attachDashboardEvents() {
         });
     });
 
-    // Open Modal
+    // Card Click Events (Open Modal)
     document.querySelectorAll('.stock-card').forEach(card => {
         card.addEventListener('click', (e) => {
+            // Wenn wir den Delete-Button getroffen haben, abbrechen
             if(e.target.closest('.delete-btn')) return;
+            
             const sym = e.currentTarget.dataset.symbol;
             openModal(sym);
         });
@@ -131,6 +133,8 @@ function initSearch() {
     const input = document.getElementById('search-input');
     const resultsContainer = document.getElementById('search-results');
     const spinner = document.getElementById('search-spinner');
+
+    if(!input) return;
 
     document.addEventListener('click', (e) => {
         if (!e.target.closest('#search-input') && !e.target.closest('#search-results')) {
@@ -169,24 +173,16 @@ function initSearch() {
 
 // APP START
 document.addEventListener('DOMContentLoaded', async () => {
+    console.log('App v5 init');
+    
     // Theme
     const currentTheme = initTheme();
     updateThemeIcon(currentTheme);
-    themeBtn.addEventListener('click', () => {
-        updateThemeIcon(toggleTheme());
-    });
+    if(themeBtn) {
+        themeBtn.addEventListener('click', () => {
+            updateThemeIcon(toggleTheme());
+        });
+    }
 
-    // UI
+    // UI Structure
     renderAppSkeleton(rootEl);
-    
-    // Modal Events
-    closeModalBtns.forEach(btn => btn?.addEventListener('click', closeModal));
-    // Close on backdrop click
-    modal.addEventListener('click', (e) => {
-        if(e.target === modal) closeModal();
-    });
-
-    // Init
-    initSearch();
-    loadDashboard();
-});
