@@ -1,6 +1,6 @@
 /**
  * AlphaView Main Controller
- * Step 6: Interactive Time Ranges
+ * Step 7: Final Polish (German/Metadata)
  */
 import { initTheme, toggleTheme } from './theme.js';
 import { fetchChartData, searchSymbol } from './api.js';
@@ -9,38 +9,41 @@ import { getWatchlist, addSymbol, removeSymbol } from './store.js';
 import { renderAppSkeleton, createStockCardHTML, renderSearchResults } from './ui.js';
 import { renderChart } from './charts.js';
 
-// Global State
 const state = {
     searchDebounce: null,
-    currentSymbol: null, // Für Modal State
-    currentRange: '1y'   // Default Range
+    currentSymbol: null,
+    currentRange: '1y'
 };
 
-// DOM Elements
 const rootEl = document.getElementById('app-root');
 const themeBtn = document.getElementById('theme-toggle');
 
-// Modal Elements
 const modal = document.getElementById('chart-modal');
+const modalFullname = document.getElementById('modal-fullname');
 const modalSymbol = document.getElementById('modal-symbol');
+const modalExchange = document.getElementById('modal-exchange');
+const modalType = document.getElementById('modal-type');
 const closeModalBtns = [document.getElementById('close-modal'), document.getElementById('close-modal-btn')];
 const rangeBtns = document.querySelectorAll('.chart-range-btn');
 
-// --- MODAL & CHART LOGIC ---
+// --- MODAL LOGIC ---
 
-function openModal(symbol) {
+async function openModal(symbol) {
     if(!modal) return;
     state.currentSymbol = symbol;
-    state.currentRange = '1y'; // Reset auf Default beim Öffnen
+    state.currentRange = '1y'; // Default ist 1 Jahr (Button "1J")
     
+    // Reset UI Texts
+    modalFullname.textContent = 'Lade Daten...';
     modalSymbol.textContent = symbol;
-    modal.classList.remove('hidden');
+    modalExchange.textContent = '...';
+    modalType.textContent = '...';
     
-    // Buttons resetten (1Y aktiv setzen)
+    modal.classList.remove('hidden');
     updateRangeButtonsUI('1y');
 
-    // Chart laden
-    loadChartForModal(symbol, '1y');
+    // Chart & Metadata laden
+    await loadChartForModal(symbol, '1y');
 }
 
 function closeModal() {
@@ -48,15 +51,16 @@ function closeModal() {
     state.currentSymbol = null;
 }
 
-// UI Helfer für Buttons
 function updateRangeButtonsUI(activeRange) {
+    // Map internal API range back to button range for highlighting
+    // e.g. if we clicked '5y' (mapped to 3J), we want to highlight 3J button if that was the click source
+    // Simple way: check data-range attribute
     rangeBtns.forEach(btn => {
         const range = btn.dataset.range;
-        // Styles zurücksetzen
+        
         btn.classList.remove('bg-white', 'dark:bg-slate-600', 'text-primary', 'dark:text-white', 'shadow-sm');
         btn.classList.add('text-slate-600', 'dark:text-slate-400', 'hover:bg-white');
         
-        // Active Style setzen
         if(range === activeRange) {
             btn.classList.remove('text-slate-600', 'dark:text-slate-400', 'hover:bg-white');
             btn.classList.add('bg-white', 'dark:bg-slate-600', 'text-primary', 'dark:text-white', 'shadow-sm');
@@ -66,45 +70,59 @@ function updateRangeButtonsUI(activeRange) {
 
 async function loadChartForModal(symbol, range) {
     const canvasId = 'main-chart';
-    
-    // Kleiner visueller Indikator, dass geladen wird (Opazität)
     const canvas = document.getElementById(canvasId);
     if(canvas) canvas.style.opacity = '0.5';
 
     try {
-        // Interval Logik: Bei 1M/6M nehmen wir 1d, bei 5Y/MAX nehmen wir 1wk oder 1mo für Speed
+        // Interval Optimierung
         let interval = '1d';
-        if (range === '5y' || range === 'max') interval = '1wk';
+        if (range === '5y' || range === '10y' || range === 'max') interval = '1wk'; // Wöchentlich für lange Zeiträume
 
         const rawData = await fetchChartData(symbol, range, interval);
         
         if(rawData) {
+            // 1. Chart rendern
             renderChart(canvasId, rawData);
+
+            // 2. Metadaten updaten (falls vorhanden)
+            if(rawData.meta) {
+                // Yahoo liefert oft exchangeName und instrumentType
+                modalExchange.textContent = rawData.meta.exchangeName || rawData.meta.exchangeTimezoneName || 'N/A';
+                modalType.textContent = rawData.meta.instrumentType || 'STOCK';
+                
+                // Name suchen wir uns aus store oder fallback
+                // Leider ist der volle Name im Chart-Objekt oft nicht enthalten, 
+                // aber "shortName" manchmal schon in anderen Endpoints. 
+                // Wir nutzen hier das Symbol als Fallback, da wir für den vollen Namen 
+                // einen extra Request bräuchten, was die App verlangsamt.
+                // Alternative: Wir nutzen die Währung als Indikator.
+                const currency = rawData.meta.currency;
+                modalFullname.textContent = `${symbol} (${currency})`; 
+            }
         }
     } catch (e) {
         console.error("Chart load failed", e);
+        if(modalFullname) modalFullname.textContent = "Fehler beim Laden";
     } finally {
         if(canvas) canvas.style.opacity = '1';
     }
 }
 
-// Event Listener für Range Buttons
+// Event Listener
 rangeBtns.forEach(btn => {
     btn.addEventListener('click', () => {
         if(!state.currentSymbol) return;
         const range = btn.dataset.range;
-        
         state.currentRange = range;
         updateRangeButtonsUI(range);
         loadChartForModal(state.currentSymbol, range);
     });
 });
 
-
-// --- CORE LOGIC (Watchlist & Search) ---
+// --- CORE ---
 
 function updateThemeIcon(mode) {
-    const icon = themeBtn.querySelector('i');
+    const icon = themeBtn?.querySelector('i');
     if(!icon) return;
     if (mode === 'dark') {
         icon.classList.remove('fa-moon');
@@ -129,9 +147,8 @@ async function loadDashboard() {
     }
 
     if(emptyStateEl) emptyStateEl.classList.add('hidden');
-    
     if(!gridEl.hasChildNodes()) {
-        gridEl.innerHTML = '<div class="col-span-full text-center text-slate-400 py-8 animate-pulse">Lade Kurse...</div>';
+        gridEl.innerHTML = '<div class="col-span-full text-center text-slate-400 py-8 animate-pulse">Lade Watchlist...</div>';
     }
 
     const promises = watchlist.map(async (symbol) => {
@@ -139,10 +156,7 @@ async function loadDashboard() {
             const rawData = await fetchChartData(symbol, '1y', '1d');
             if (!rawData) return null;
             return analyze(rawData);
-        } catch (e) {
-            console.error(e);
-            return null;
-        }
+        } catch (e) { return null; }
     });
 
     const results = await Promise.all(promises);
@@ -218,29 +232,15 @@ function initSearch() {
     });
 }
 
-// APP START
 document.addEventListener('DOMContentLoaded', async () => {
-    // Theme
     const currentTheme = initTheme();
     updateThemeIcon(currentTheme);
     if(themeBtn) {
-        themeBtn.addEventListener('click', () => {
-            updateThemeIcon(toggleTheme());
-        });
+        themeBtn.addEventListener('click', () => updateThemeIcon(toggleTheme()));
     }
-
-    // UI
     renderAppSkeleton(rootEl);
-    
-    // Modal Events
     closeModalBtns.forEach(btn => btn?.addEventListener('click', closeModal));
-    if(modal) {
-        modal.addEventListener('click', (e) => {
-            if(e.target === modal) closeModal();
-        });
-    }
-
-    // Init
+    if(modal) modal.addEventListener('click', (e) => { if(e.target === modal) closeModal(); });
     initSearch();
     loadDashboard();
 });

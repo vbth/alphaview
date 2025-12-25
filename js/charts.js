@@ -1,6 +1,6 @@
 /**
  * Charts Module
- * Enhanced with Axes and Formatting
+ * German Formatting & Layout
  */
 let chartInstance = null;
 
@@ -11,32 +11,31 @@ export function renderChart(canvasId, rawData) {
     const ctx = canvas.getContext('2d');
     const timestamps = rawData.timestamp;
     const prices = rawData.indicators.quote[0].close;
-    const currency = rawData.meta.currency || ''; // Währung aus Metadaten (z.B. USD, EUR)
+    const currency = rawData.meta.currency || '';
 
-    // Labels formatieren (Datum)
-    const labels = timestamps.map(t => {
-        const date = new Date(t * 1000);
-        return date; // Wir geben das Date Object weiter, Chart.js formatiert es besser via Callback
-    });
+    // Konvertiere Timestamps in Date Objekte
+    const labels = timestamps.map(t => new Date(t * 1000));
 
     if (chartInstance) {
         chartInstance.destroy();
     }
 
-    // Farben
+    // Farben Logik
     const startPrice = prices[0];
     const endPrice = prices[prices.length - 1];
     const isBullish = endPrice >= startPrice;
     
-    const lineColor = isBullish ? '#22c55e' : '#ef4444'; // Green vs Red
-    const gradientColor = isBullish ? 'rgba(34, 197, 94, 0.1)' : 'rgba(239, 68, 68, 0.1)';
+    const lineColor = isBullish ? '#22c55e' : '#ef4444'; 
+    const gradientColor = ctx.createLinearGradient(0, 0, 0, 400);
+    gradientColor.addColorStop(0, isBullish ? 'rgba(34, 197, 94, 0.2)' : 'rgba(239, 68, 68, 0.2)');
+    gradientColor.addColorStop(1, 'rgba(15, 23, 42, 0)'); // Fade out
 
     chartInstance = new Chart(ctx, {
         type: 'line',
         data: {
-            labels: labels, // Date Objects
+            labels: labels,
             datasets: [{
-                label: 'Price',
+                label: 'Kurs',
                 data: prices,
                 borderColor: lineColor,
                 backgroundColor: gradientColor,
@@ -57,43 +56,57 @@ export function renderChart(canvasId, rawData) {
             plugins: {
                 legend: { display: false },
                 tooltip: {
+                    backgroundColor: 'rgba(15, 23, 42, 0.9)',
+                    titleColor: '#e2e8f0',
+                    bodyColor: '#fff',
+                    borderColor: 'rgba(148, 163, 184, 0.2)',
+                    borderWidth: 1,
+                    padding: 10,
+                    displayColors: false,
                     callbacks: {
+                        title: function(context) {
+                            const date = new Date(context[0].parsed.x);
+                            return date.toLocaleDateString('de-DE', { 
+                                day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute:'2-digit'
+                            });
+                        },
                         label: function(context) {
-                            return ` ${context.parsed.y.toFixed(2)} ${currency}`;
+                            return `${context.parsed.y.toFixed(2)} ${currency}`;
                         }
                     }
                 }
             },
             scales: {
                 x: {
-                    display: true, // X-Achse anzeigen
+                    display: true,
                     grid: {
                         display: false,
                         drawBorder: false
                     },
                     ticks: {
-                        color: '#94a3b8', // Slate-400
-                        maxTicksLimit: 6, // Nicht zu viele Labels
+                        color: '#94a3b8',
+                        maxRotation: 0,
+                        autoSkip: true,
+                        maxTicksLimit: 6,
                         callback: function(val, index) {
-                            // Intelligente Datumsformatierung
                             const date = this.getLabelForValue(val);
-                            // Da labels hier Date-Objects sind (oder timestamps), formatieren wir sie kurz
                             const d = new Date(labels[index]); 
-                            return d.toLocaleDateString(undefined, { month: 'short', year: '2-digit' });
+                            // Deutsche Formatierung: 24.10.23
+                            return d.toLocaleDateString('de-DE', { day: '2-digit', month: '2-digit', year: '2-digit' });
                         }
                     }
                 },
                 y: {
-                    display: true, // Y-Achse anzeigen
+                    display: true,
                     position: 'right',
                     grid: {
-                        color: 'rgba(200, 200, 200, 0.1)',
+                        color: 'rgba(200, 200, 200, 0.05)',
                         borderDash: [5, 5]
                     },
                     ticks: {
                         color: '#94a3b8',
                         callback: function(value) {
-                            return value.toFixed(1) + ' ' + currency; // Z.B. "150.5 USD"
+                            return value.toFixed(1) + ' ' + currency;
                         }
                     }
                 }
