@@ -1,25 +1,62 @@
 /**
  * AlphaView Main Controller
- * Step 4: Dashboard Logic & Search
+ * Step 5: Full App with Charts
  */
 import { initTheme, toggleTheme } from './theme.js';
 import { fetchChartData, searchSymbol } from './api.js';
 import { analyze } from './analysis.js';
 import { getWatchlist, addSymbol, removeSymbol } from './store.js';
 import { renderAppSkeleton, createStockCardHTML, renderSearchResults } from './ui.js';
+import { renderChart } from './charts.js';
 
 // Global State
 const state = {
-    searchDebounce: null
+    searchDebounce: null,
+    cache: {} // Einfacher Runtime Cache für Chart-Daten
 };
 
 // DOM Elements
 const rootEl = document.getElementById('app-root');
 const themeBtn = document.getElementById('theme-toggle');
 
-// Helper
+// Modal Elements
+const modal = document.getElementById('chart-modal');
+const modalSymbol = document.getElementById('modal-symbol');
+const closeModalBtns = [document.getElementById('close-modal'), document.getElementById('close-modal-btn')];
+
+// --- MODAL LOGIC ---
+function openModal(symbol) {
+    modalSymbol.textContent = symbol;
+    modal.classList.remove('hidden');
+    
+    // Daten holen (aus Cache oder API)
+    // Wir holen für den Chart mehr Daten (1 Jahr) falls im Dashboard nur weniger geladen wurden
+    loadChartForModal(symbol);
+}
+
+function closeModal() {
+    modal.classList.add('hidden');
+}
+
+async function loadChartForModal(symbol) {
+    const canvasId = 'main-chart';
+    // Zeige Ladezustand im Canvas? Vorerst lassen wir Chart.js animieren
+    
+    try {
+        const rawData = await fetchChartData(symbol, '1y', '1d');
+        if(rawData) {
+            renderChart(canvasId, rawData);
+        }
+    } catch (e) {
+        console.error("Chart load failed", e);
+    }
+}
+
+// --- CORE LOGIC ---
+
 function updateThemeIcon(mode) {
     const icon = themeBtn.querySelector('i');
+    if(!icon) return;
     if (mode === 'dark') {
         icon.classList.remove('fa-moon');
         icon.classList.add('fa-sun');
@@ -29,9 +66,6 @@ function updateThemeIcon(mode) {
     }
 }
 
-/**
- * Lädt alle Daten für die Watchlist und rendert das Grid
- */
 async function loadDashboard() {
     const watchlist = getWatchlist();
     const gridEl = document.getElementById('dashboard-grid');
@@ -44,63 +78,60 @@ async function loadDashboard() {
     }
 
     emptyStateEl.classList.add('hidden');
-    // Zeige Lade-Skelette oder behalte aktuellen Inhalt bei Refresh
     if(!gridEl.hasChildNodes()) {
-        gridEl.innerHTML = '<div class="col-span-full text-center text-slate-400 py-8">Lade Kurse...</div>';
+        gridEl.innerHTML = '<div class="col-span-full text-center text-slate-400 py-8 animate-pulse">Lade Kurse...</div>';
     }
 
-    // Parallel Fetching für Performance
     const promises = watchlist.map(async (symbol) => {
         try {
-            const rawData = await fetchChartData(symbol);
+            // Für Dashboard reicht 1y auch, damit Analysis stimmt
+            const rawData = await fetchChartData(symbol, '1y', '1d');
             if (!rawData) return null;
             return analyze(rawData);
         } catch (e) {
-            console.error(`Error loading ${symbol}`, e);
+            console.error(e);
             return null;
         }
     });
 
     const results = await Promise.all(promises);
     
-    // Grid rendern
     gridEl.innerHTML = results
-        .filter(r => r !== null) // Fehlerhafte rausfiltern
+        .filter(r => r !== null)
         .map(data => createStockCardHTML(data))
         .join('');
 
-    // Event Listener für Delete Buttons hinzufügen
+    attachDashboardEvents();
+}
+
+function attachDashboardEvents() {
+    // Delete
     document.querySelectorAll('.delete-btn').forEach(btn => {
         btn.addEventListener('click', (e) => {
-            e.stopPropagation(); // Damit man nicht auf die Karte klickt
+            e.stopPropagation();
             const sym = e.currentTarget.dataset.symbol;
-            if(confirm(`${sym} von Watchlist entfernen?`)) {
+            if(confirm(`${sym} entfernen?`)) {
                 removeSymbol(sym);
-                loadDashboard(); // Refresh
+                loadDashboard();
             }
         });
     });
 
-    // Event Listener für Karten-Klick (Vorbreitung für Chart View)
+    // Open Modal
     document.querySelectorAll('.stock-card').forEach(card => {
         card.addEventListener('click', (e) => {
-            // Ignorieren wenn wir auf Delete geklickt haben
             if(e.target.closest('.delete-btn')) return;
             const sym = e.currentTarget.dataset.symbol;
-            alert(`Detail View für ${sym} kommt in Schritt 5!`);
+            openModal(sym);
         });
     });
 }
 
-/**
- * Handle Search Input
- */
 function initSearch() {
     const input = document.getElementById('search-input');
     const resultsContainer = document.getElementById('search-results');
     const spinner = document.getElementById('search-spinner');
 
-    // Close results on click outside
     document.addEventListener('click', (e) => {
         if (!e.target.closest('#search-input') && !e.target.closest('#search-results')) {
             resultsContainer.classList.add('hidden');
@@ -109,7 +140,6 @@ function initSearch() {
 
     input.addEventListener('input', (e) => {
         const query = e.target.value.trim();
-        
         clearTimeout(state.searchDebounce);
         
         if (query.length < 2) {
@@ -119,41 +149,44 @@ function initSearch() {
 
         spinner.classList.remove('hidden');
 
-        // Debounce API Calls (warten bis user fertig tippt)
         state.searchDebounce = setTimeout(async () => {
             const results = await searchSymbol(query);
             spinner.classList.add('hidden');
             renderSearchResults(results, resultsContainer);
 
-            // Add Click Handlers to Results
             document.querySelectorAll('.search-item').forEach(item => {
                 item.addEventListener('click', () => {
                     const symbol = item.dataset.symbol;
-                    addSymbol(symbol); // In Store speichern
-                    input.value = ''; // Reset Input
-                    resultsContainer.classList.add('hidden'); // Hide Dropdown
-                    loadDashboard(); // Grid neu laden
+                    addSymbol(symbol);
+                    input.value = '';
+                    resultsContainer.classList.add('hidden');
+                    loadDashboard();
                 });
             });
-        }, 500); // 500ms warten
+        }, 500);
     });
 }
 
 // APP START
 document.addEventListener('DOMContentLoaded', async () => {
-    // 1. Init Theme
+    // Theme
     const currentTheme = initTheme();
     updateThemeIcon(currentTheme);
     themeBtn.addEventListener('click', () => {
         updateThemeIcon(toggleTheme());
     });
 
-    // 2. Render Basic UI
+    // UI
     renderAppSkeleton(rootEl);
-
-    // 3. Init Logic
-    initSearch();
     
-    // 4. Initial Load (falls AAPL noch drin ist)
+    // Modal Events
+    closeModalBtns.forEach(btn => btn?.addEventListener('click', closeModal));
+    // Close on backdrop click
+    modal.addEventListener('click', (e) => {
+        if(e.target === modal) closeModal();
+    });
+
+    // Init
+    initSearch();
     loadDashboard();
 });
