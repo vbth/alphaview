@@ -43,21 +43,30 @@
 </head>
 <body class="bg-slate-50 text-slate-900 dark:bg-dark-bg dark:text-slate-100 flex flex-col min-h-screen">
 
+    <!-- Global Error Handler (Script direkt im Body für Debugging) -->
+    <script>
+        window.addEventListener('error', function(event) {
+            const root = document.getElementById('app-root');
+            if(root) {
+                root.innerHTML = `
+                <div class="p-4 bg-red-100 text-red-800 border border-red-300 rounded">
+                    <strong>Kritischer Fehler:</strong><br>
+                    ${event.message}<br>
+                    <small>In: ${event.filename} (Zeile ${event.lineno})</small>
+                </div>`;
+            }
+        });
+    </script>
+
     <!-- HEADER -->
     <header class="w-full bg-white dark:bg-dark-surface shadow-sm border-b border-slate-200 dark:border-slate-700 sticky top-0 z-50">
         <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
-            <!-- Logo -->
             <div class="flex items-center gap-2">
                 <i class="fa-solid fa-chart-line text-primary dark:text-neon-accent text-xl"></i>
-                <h1 class="text-xl font-bold tracking-tight">
-                    Alpha<span class="text-primary dark:text-neon-accent">View</span>
-                </h1>
+                <h1 class="text-xl font-bold tracking-tight">Alpha<span class="text-primary dark:text-neon-accent">View</span></h1>
             </div>
-
-            <!-- Controls -->
             <div>
-                <button id="theme-toggle" class="p-2 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-700 transition-colors focus:outline-none focus:ring-2 focus:ring-primary" aria-label="Toggle Theme">
-                    <!-- Icon wird via JS gesetzt -->
+                <button id="theme-toggle" class="p-2 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-700 transition-colors">
                     <i class="fa-solid fa-moon"></i>
                 </button>
             </div>
@@ -68,9 +77,10 @@
     <main class="flex-grow w-full max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         <div id="app-root">
             <!-- Loading State -->
-            <div class="flex flex-col items-center justify-center h-64 space-y-4">
+            <div id="loading-spinner" class="flex flex-col items-center justify-center h-64 space-y-4">
                 <div class="animate-spin rounded-full h-12 w-12 border-b-2 border-primary dark:border-neon-accent"></div>
-                <p class="text-slate-500 dark:text-slate-400 text-sm animate-pulse">Lade System...</p>
+                <p class="text-slate-500 dark:text-slate-400 text-sm animate-pulse">Verbinde mit Server...</p>
+                <button onclick="location.reload()" class="text-xs text-primary underline mt-4">Seite neu laden</button>
             </div>
         </div>
     </main>
@@ -78,8 +88,7 @@
     <!-- FOOTER -->
     <footer class="bg-white dark:bg-dark-surface border-t border-slate-200 dark:border-slate-700 py-6">
         <div class="max-w-7xl mx-auto px-4 text-center text-xs text-slate-500 dark:text-slate-400">
-            <p>Local-First PWA running on GitHub Pages. No tracking.</p>
-            <p class="mt-1">&copy; 2025 AlphaView Analytics.</p>
+            <p>Local-First PWA running on GitHub Pages.</p>
         </div>
     </footer>
 
