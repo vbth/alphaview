@@ -1,7 +1,6 @@
 /**
  * Charts Module
- * Renders interactive charts using Chart.js.
- * Updated: Specific Date Range Formatting in Badge.
+ * Fixes: X-Axis Labels for Week View & Dynamic Range Text
  */
 let chartInstance = null;
 
@@ -10,6 +9,7 @@ const formatCurrencyValue = (val, currency) => {
     return new Intl.NumberFormat(locale, { style: 'currency', currency: currency }).format(val);
 };
 
+// KW Berechner
 function getWeekNumber(d) {
     d = new Date(Date.UTC(d.getFullYear(), d.getMonth(), d.getDate()));
     d.setUTCDate(d.getUTCDate() + 4 - (d.getUTCDay() || 7));
@@ -17,49 +17,46 @@ function getWeekNumber(d) {
     return Math.ceil((((d - yearStart) / 86400000) + 1) / 7);
 }
 
-// Logik für den Text im Badge (oben)
+// Text Update Logik (Badge)
 function updateRangeInfo(labels, range) {
-    const el = document.getElementById('chart-date-range');
+    // Neue ID nutzen!
+    const el = document.getElementById('dynamic-range-text');
     if (!el || labels.length === 0) return;
 
     const start = labels[0];
     const end = labels[labels.length - 1];
     
-    // Formatter
-    const fDate = (d) => d.toLocaleDateString('de-DE', { day: '2-digit', month: '2-digit', year: 'numeric' }); // TT.MM.JJJJ
-    const fMonthYear = (d) => d.toLocaleDateString('de-DE', { month: '2-digit', year: 'numeric' }); // MM.JJJJ
-    const fYear = (d) => d.getFullYear(); // JJJJ
+    const fDate = (d) => d.toLocaleDateString('de-DE', { day: '2-digit', month: '2-digit', year: 'numeric' }); // 12.10.2023
+    const fDateShort = (d) => d.toLocaleDateString('de-DE', { day: '2-digit', month: '2-digit' }); // 12.10.
+    const fMonthYear = (d) => d.toLocaleDateString('de-DE', { month: '2-digit', year: 'numeric' }); // 10.2023
+    const fYear = (d) => d.getFullYear(); 
 
     let text = "";
 
     switch(range) {
         case '1d':
-            // Format: TT.MM.JJJJ
-            text = fDate(end);
+            text = fDate(end); // "24.10.2023"
             break;
         case '5d':
-            // Format: KWXX TT.MM.JJJJ - TT.MM.JJJJ
             const kw = getWeekNumber(end);
-            text = `KW${kw} ${fDate(start)} bis ${fDate(end)}`;
+            // "KW 42 (16.10.2023 bis 20.10.2023)"
+            text = `KW ${kw} (${fDate(start)} bis ${fDate(end)})`;
             break;
         case '1mo':
         case '6mo':
-            // Format: MM/JJJJ - MM/JJJJ
-            // replace '.' mit '/' für den gewünschten Look
+            // "10/2023 – 04/2024" (Slash Look)
             text = `${fMonthYear(start).replace('.','/')} – ${fMonthYear(end).replace('.','/')}`;
             break;
         case '1y':
-            // Format: JJJJ oder JJJJ - JJJJ
             const y1 = fYear(start);
             const y2 = fYear(end);
             text = (y1 === y2) ? `${y1}` : `${y1} bis ${y2}`;
             break;
         default:
-            // 5y, 10y, max -> Format: JJJJ - JJJJ
+            // "2020 bis 2025"
             text = `${fYear(start)} bis ${fYear(end)}`;
             break;
     }
-
     el.textContent = text;
 }
 
@@ -120,8 +117,10 @@ export function renderChart(canvasId, rawData, range = '1y') {
                     callbacks: {
                         title: function(context) {
                             const d = labels[context[0].dataIndex];
-                            // Tooltip Formatierung (behalten wie vorher für gute UX)
-                            if (range === '1d' || range === '5d') return d.toLocaleDateString('de-DE', { weekday: 'short', day: '2-digit', month: '2-digit', hour: '2-digit', minute:'2-digit' });
+                            // Tooltip: Immer volles Datum + Uhrzeit bei kurzen Zeiträumen
+                            if (range === '1d' || range === '5d') {
+                                return d.toLocaleDateString('de-DE', { weekday: 'short', day: '2-digit', month: '2-digit', hour: '2-digit', minute:'2-digit' });
+                            }
                             return d.toLocaleDateString('de-DE', { day: '2-digit', month: '2-digit', year: 'numeric' });
                         },
                         label: function(context) { return formatCurrencyValue(context.parsed.y, currency); }
@@ -136,9 +135,17 @@ export function renderChart(canvasId, rawData, range = '1y') {
                         callback: function(val, index) {
                             const d = labels[index];
                             if (!d) return '';
-                            // Achsenbeschriftung (behalten wie vorher)
+                            
+                            // X-ACHSE FIX:
+                            // 1T: Uhrzeit (10:00)
                             if (range === '1d') return d.toLocaleTimeString('de-DE', { hour: '2-digit', minute:'2-digit' });
-                            if (range === '5d') return d.toLocaleDateString('de-DE', { weekday: 'short', day: '2-digit' });
+                            
+                            // 1W: Wochentag + Datum (Mo 12.10.) -> HIER WAR DER FEHLER
+                            if (range === '5d') {
+                                return d.toLocaleDateString('de-DE', { weekday: 'short', day: '2-digit', month: '2-digit' });
+                            }
+                            
+                            // Rest: Datum (12.10.23)
                             return d.toLocaleDateString('de-DE', { day: '2-digit', month: '2-digit', year: '2-digit' });
                         }
                     }

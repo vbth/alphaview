@@ -1,6 +1,6 @@
 /**
  * App Module
- * Main Controller: Coordinates Logic, UI, and Events.
+ * Coordinates Logic.
  */
 import { initTheme, toggleTheme } from './theme.js';
 import { fetchChartData, searchSymbol } from './api.js';
@@ -9,17 +9,9 @@ import { getWatchlist, addSymbol, removeSymbol, updateQuantity } from './store.j
 import { renderAppSkeleton, createStockCardHTML, renderSearchResults, formatMoney } from './ui.js';
 import { renderChart } from './charts.js';
 
-const state = {
-    searchDebounce: null,
-    currentSymbol: null,
-    currentRange: '1y',
-    dashboardData: [],
-    eurUsdRate: 1.08
-};
-
+const state = { searchDebounce: null, currentSymbol: null, currentRange: '1y', dashboardData: [], eurUsdRate: 1.08 };
 const rootEl = document.getElementById('app-root');
 const themeBtn = document.getElementById('theme-toggle');
-
 const modal = document.getElementById('chart-modal');
 const modalFullname = document.getElementById('modal-fullname');
 const modalSymbol = document.getElementById('modal-symbol');
@@ -27,18 +19,13 @@ const modalExchange = document.getElementById('modal-exchange');
 const modalType = document.getElementById('modal-type');
 const closeModalBtns = [document.getElementById('close-modal'), document.getElementById('close-modal-btn')];
 const rangeBtns = document.querySelectorAll('.chart-range-btn');
-
-const TYPE_TRANSLATIONS = {
-    'EQUITY': 'AKTIE', 'ETF': 'ETF', 'MUTUALFUND': 'FONDS', 'INDEX': 'INDEX',
-    'CRYPTOCURRENCY': 'KRYPTO', 'CURRENCY': 'DEVISEN', 'FUTURE': 'FUTURE', 'OPTION': 'OPTION'
-};
+const TYPE_TRANSLATIONS = { 'EQUITY': 'AKTIE', 'ETF': 'ETF', 'MUTUALFUND': 'FONDS', 'INDEX': 'INDEX', 'CRYPTOCURRENCY': 'KRYPTO', 'CURRENCY': 'DEVISEN', 'FUTURE': 'FUTURE', 'OPTION': 'OPTION' };
 
 async function loadDashboard() {
     const watchlist = getWatchlist();
     const gridEl = document.getElementById('dashboard-grid');
     const emptyStateEl = document.getElementById('empty-state');
     const summaryEl = document.getElementById('portfolio-summary');
-
     if (!gridEl) return;
     if (watchlist.length === 0) {
         gridEl.innerHTML = '';
@@ -48,12 +35,10 @@ async function loadDashboard() {
     }
     if(emptyStateEl) emptyStateEl.classList.add('hidden');
     if(summaryEl) summaryEl.classList.remove('hidden');
-    if(!gridEl.hasChildNodes()) gridEl.innerHTML = '<div class="col-span-full text-center text-slate-400 py-8 animate-pulse">Lade Kurse & Wechselkurse...</div>';
-
+    if(!gridEl.hasChildNodes()) gridEl.innerHTML = '<div class="col-span-full text-center text-slate-400 py-8 animate-pulse">Lade Kurse...</div>';
     try {
         let rateData = null;
         try { rateData = await fetchChartData('EURUSD=X', '5d', '1d'); } catch (e) {}
-        
         const stockPromises = watchlist.map(async (item) => {
             try {
                 const rawData = await fetchChartData(item.symbol, '1y', '1d');
@@ -63,14 +48,12 @@ async function loadDashboard() {
                 return analysis;
             } catch (e) { return null; }
         });
-
         const stockResults = await Promise.all(stockPromises);
         if(rateData && rateData.indicators && rateData.indicators.quote[0].close) {
             const closes = rateData.indicators.quote[0].close;
             const currentRate = closes.filter(c => c).pop();
             if(currentRate) state.eurUsdRate = currentRate;
         }
-
         state.dashboardData = stockResults.filter(r => r !== null);
         renderDashboardGrid();
     } catch (criticalError) { console.error("Dashboard Error:", criticalError); }
@@ -81,25 +64,19 @@ function renderDashboardGrid() {
     const totalEurEl = document.getElementById('total-balance-eur');
     const totalUsdEl = document.getElementById('total-balance-usd');
     const totalPosEl = document.getElementById('total-positions');
-
     if (!totalEurEl) return;
     let totalEUR = 0;
-
     state.dashboardData.forEach(item => {
         const rawValue = item.price * item.qty;
         if (item.currency === 'EUR') totalEUR += rawValue;
         else if (item.currency === 'USD') totalEUR += (rawValue / state.eurUsdRate);
         else totalEUR += rawValue;
     });
-
     const totalUSD = totalEUR * state.eurUsdRate;
     if(totalEurEl) totalEurEl.textContent = formatMoney(totalEUR, 'EUR');
     if(totalUsdEl) totalUsdEl.textContent = formatMoney(totalUSD, 'USD');
     if(totalPosEl) totalPosEl.textContent = state.dashboardData.length;
-
-    gridEl.innerHTML = state.dashboardData
-        .map(data => createStockCardHTML(data, data.qty, totalEUR, state.eurUsdRate))
-        .join('');
+    gridEl.innerHTML = state.dashboardData.map(data => createStockCardHTML(data, data.qty, totalEUR, state.eurUsdRate)).join('');
     attachDashboardEvents();
 }
 
@@ -107,8 +84,7 @@ function attachDashboardEvents() {
     document.querySelectorAll('.delete-btn').forEach(btn => {
         btn.addEventListener('click', (e) => {
             e.stopPropagation();
-            const sym = e.currentTarget.dataset.symbol;
-            if(confirm(`${sym} entfernen?`)) { removeSymbol(sym); loadDashboard(); }
+            if(confirm(`${e.currentTarget.dataset.symbol} entfernen?`)) { removeSymbol(e.currentTarget.dataset.symbol); loadDashboard(); }
         });
     });
     document.querySelectorAll('.stock-card').forEach(card => {
@@ -139,6 +115,10 @@ async function openModal(symbol) {
     modalSymbol.textContent = symbol;
     modalExchange.textContent = '...';
     modalType.textContent = '...';
+    // Reset range text
+    const rangeText = document.getElementById('dynamic-range-text');
+    if(rangeText) rangeText.textContent = 'Lade...';
+    
     modal.classList.remove('hidden');
     updateRangeButtonsUI('1y');
     await loadChartForModal(symbol, '1y');
@@ -162,7 +142,6 @@ async function loadChartForModal(symbol, requestedRange) {
     const canvasId = 'main-chart';
     const canvas = document.getElementById(canvasId);
     if(canvas) canvas.style.opacity = '0.5';
-
     try {
         let interval = '1d';
         if (requestedRange === '1d') interval = '5m';
@@ -200,24 +179,19 @@ function initSearch() {
     const input = document.getElementById('search-input');
     const resultsContainer = document.getElementById('search-results');
     const spinner = document.getElementById('search-spinner');
-
     if(!input) return;
-    document.addEventListener('click', (e) => {
-        if (!e.target.closest('#search-input') && !e.target.closest('#search-results')) resultsContainer.classList.add('hidden');
-    });
-
+    document.addEventListener('click', (e) => { if (!e.target.closest('#search-input') && !e.target.closest('#search-results')) resultsContainer.classList.add('hidden'); });
     input.addEventListener('keydown', (e) => {
         if (e.key === 'Enter') {
             const val = input.value.trim().toUpperCase();
             if (val.length > 0) {
-                if(addSymbol(val)) console.log(`Manuell hinzugefügt: ${val}`);
+                if(addSymbol(val)) console.log(`Added: ${val}`);
                 input.value = '';
                 resultsContainer.classList.add('hidden');
                 loadDashboard();
             }
         }
     });
-
     input.addEventListener('input', (e) => {
         const query = e.target.value.trim();
         clearTimeout(state.searchDebounce);
@@ -241,16 +215,9 @@ function initSearch() {
 
 document.addEventListener('DOMContentLoaded', async () => {
     const currentTheme = initTheme();
-    const updateIcon = (mode) => {
-        const icon = themeBtn?.querySelector('i');
-        if(icon) {
-            if (mode === 'dark') { icon.classList.remove('fa-moon'); icon.classList.add('fa-sun'); } 
-            else { icon.classList.remove('fa-sun'); icon.classList.add('fa-moon'); }
-        }
-    };
+    const updateIcon = (mode) => { const icon = themeBtn?.querySelector('i'); if(icon) { if (mode === 'dark') { icon.classList.remove('fa-moon'); icon.classList.add('fa-sun'); } else { icon.classList.remove('fa-sun'); icon.classList.add('fa-moon'); } } };
     updateIcon(currentTheme);
     if(themeBtn) themeBtn.addEventListener('click', () => updateIcon(toggleTheme()));
-
     renderAppSkeleton(rootEl);
     closeModalBtns.forEach(btn => btn?.addEventListener('click', closeModal));
     if(modal) modal.addEventListener('click', (e) => { if(e.target === modal) closeModal(); });
