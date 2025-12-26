@@ -1,6 +1,7 @@
 /**
  * App Module
- * Updated: Copy Format with En-Dash "–"
+ * Main Controller: Coordinates Logic, UI, and Events.
+ * Updated: Copy Title "DEPOT-ZUSAMMENSETZUNG" (no colon, with hyphen)
  */
 import { initTheme, toggleTheme } from './theme.js';
 import { fetchChartData, searchSymbol } from './api.js';
@@ -249,7 +250,6 @@ document.addEventListener('DOMContentLoaded', async () => {
     const importInput = document.getElementById('import-input');
     const copyBtn = document.getElementById('copy-list-btn');
 
-    // COPY LIST BUTTON
     if(copyBtn) {
         copyBtn.addEventListener('click', () => {
             if(!state.dashboardData || state.dashboardData.length === 0) {
@@ -270,12 +270,12 @@ document.addEventListener('DOMContentLoaded', async () => {
             items.forEach(i => i.percent = (i.valEur / totalValueEUR) * 100);
             items.sort((a, b) => b.percent - a.percent);
 
-            let text = "DEPOT ZUSAMMENSETZUNG:\n\n";
+            // HIER IST DIE ÄNDERUNG
+            let text = "DEPOT-ZUSAMMENSETZUNG\n\n";
             items.forEach(i => {
                 const safeName = i.name || i.symbol || "Unbekannt";
                 const safeType = i.type || 'EQUITY';
                 const typeName = TYPE_TRANSLATIONS[safeType] || safeType;
-                // HIER: Gedankenstrich statt Minus
                 text += `[${i.percent.toFixed(1)}%] ${safeName} (${i.symbol}) – ${typeName}\n`;
             });
 
