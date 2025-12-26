@@ -1,7 +1,6 @@
 /**
  * App Module
- * Main Controller: Coordinates Logic, UI, and Events.
- * Updated: Export Filename Format (alphaview_depot_backup_YYYY-MM-DD.json)
+ * Updated: Populates Technical Indicators in Modal
  */
 import { initTheme, toggleTheme } from './theme.js';
 import { fetchChartData, searchSymbol } from './api.js';
@@ -21,6 +20,11 @@ const modalType = document.getElementById('modal-type');
 const closeModalBtns = [document.getElementById('close-modal'), document.getElementById('close-modal-btn')];
 const rangeBtns = document.querySelectorAll('.chart-range-btn');
 const TYPE_TRANSLATIONS = { 'EQUITY': 'AKTIE', 'ETF': 'ETF', 'MUTUALFUND': 'FONDS', 'INDEX': 'INDEX', 'CRYPTOCURRENCY': 'KRYPTO', 'CURRENCY': 'DEVISEN', 'FUTURE': 'FUTURE', 'OPTION': 'OPTION' };
+
+// IDs für die neuen Felder
+const modalVol = document.getElementById('modal-vol');
+const modalSMA50 = document.getElementById('modal-sma50');
+const modalSMA200 = document.getElementById('modal-sma200');
 
 async function loadDashboard() {
     const watchlist = getWatchlist();
@@ -120,6 +124,12 @@ async function openModal(symbol) {
     modalType.textContent = '...';
     const rangeText = document.getElementById('dynamic-range-text');
     if(rangeText) rangeText.textContent = 'Lade...';
+    
+    // Reset Technicals
+    if(modalVol) modalVol.textContent = '---';
+    if(modalSMA50) modalSMA50.textContent = '---';
+    if(modalSMA200) modalSMA200.textContent = '---';
+
     modal.classList.remove('hidden');
     updateRangeButtonsUI('1y');
     await loadChartForModal(symbol, '1y');
@@ -154,12 +164,23 @@ async function loadChartForModal(symbol, requestedRange) {
         const rawData = await fetchChartData(symbol, requestedRange, interval);
         if(rawData) {
             renderChart(canvasId, rawData, requestedRange);
+            
+            // ANALYZE FOR METRICS (VOL, SMA)
+            const analysis = analyze(rawData);
+            
             if(rawData.meta) {
                 if(modalExchange) modalExchange.textContent = rawData.meta.exchangeName || rawData.meta.exchangeTimezoneName || 'N/A';
                 const rawType = rawData.meta.instrumentType || 'EQUITY';
                 if(modalType) modalType.textContent = TYPE_TRANSLATIONS[rawType] || rawType;
                 const fullName = rawData.meta.longName || rawData.meta.shortName || symbol;
                 if(modalFullname) modalFullname.textContent = fullName; 
+                
+                // --- UPDATE TECHNICALS ---
+                if (analysis) {
+                    if (modalVol) modalVol.textContent = analysis.volatility ? analysis.volatility.toFixed(1) + '%' : 'n/a';
+                    if (modalSMA50) modalSMA50.textContent = analysis.sma50 ? formatMoney(analysis.sma50, rawData.meta.currency) : 'n/a';
+                    if (modalSMA200) modalSMA200.textContent = analysis.sma200 ? formatMoney(analysis.sma200, rawData.meta.currency) : 'n/a';
+                }
             }
         }
     } catch (e) { console.error(e); if(modalFullname) modalFullname.textContent = "Fehler"; } 
@@ -225,7 +246,6 @@ document.addEventListener('DOMContentLoaded', async () => {
     initSearch();
     loadDashboard();
 
-    // EXPORT / IMPORT LOGIC
     const exportBtn = document.getElementById('export-btn');
     const importBtn = document.getElementById('import-btn');
     const importInput = document.getElementById('import-input');
@@ -233,18 +253,13 @@ document.addEventListener('DOMContentLoaded', async () => {
     if(exportBtn) {
         exportBtn.addEventListener('click', () => {
             const data = localStorage.getItem('alphaview_portfolio');
-            if(!data || data === '[]') { alert('Dein Depot ist leer. Nichts zu sichern.'); return; }
-            
+            if(!data || data === '[]') { alert('Dein Depot ist leer.'); return; }
             const blob = new Blob([data], {type: 'application/json'});
             const url = URL.createObjectURL(blob);
-            
             const a = document.createElement('a');
             a.href = url;
-            
-            // UPDATE: Neuer Dateiname
             const dateStr = new Date().toISOString().slice(0,10);
             a.download = `alphaview_depot_backup_${dateStr}.json`;
-            
             document.body.appendChild(a);
             a.click();
             document.body.removeChild(a);
@@ -271,8 +286,8 @@ document.addEventListener('DOMContentLoaded', async () => {
                         localStorage.setItem('alphaview_portfolio', JSON.stringify(json));
                         alert('Depot erfolgreich importiert!');
                         location.reload();
-                    } else { alert('Ungültiges Dateiformat. JSON-Array erwartet.'); }
-                } catch(err) { alert('Fehler beim Lesen der Datei.'); console.error(err); }
+                    } else { alert('Ungültiges Dateiformat.'); }
+                } catch(err) { alert('Fehler beim Lesen der Datei.'); }
             };
             reader.readAsText(file);
         });
