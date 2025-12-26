@@ -1,6 +1,6 @@
 /**
  * Charts Module
- * Fixes: X-Axis Labels for Week View & Dynamic Range Text
+ * Fixed: ISO Week Calculation & Range Text Logic
  */
 let chartInstance = null;
 
@@ -9,55 +9,70 @@ const formatCurrencyValue = (val, currency) => {
     return new Intl.NumberFormat(locale, { style: 'currency', currency: currency }).format(val);
 };
 
-// KW Berechner
-function getWeekNumber(d) {
-    d = new Date(Date.UTC(d.getFullYear(), d.getMonth(), d.getDate()));
-    d.setUTCDate(d.getUTCDate() + 4 - (d.getUTCDay() || 7));
+// Korrekte ISO 8601 Kalenderwoche
+function getWeekNumber(date) {
+    const d = new Date(Date.UTC(date.getFullYear(), date.getMonth(), date.getDate()));
+    const dayNum = d.getUTCDay() || 7;
+    d.setUTCDate(d.getUTCDate() + 4 - dayNum);
     const yearStart = new Date(Date.UTC(d.getUTCFullYear(), 0, 1));
     return Math.ceil((((d - yearStart) / 86400000) + 1) / 7);
 }
 
-// Text Update Logik (Badge)
+// Berechnet Montag und Freitag basierend auf einem Datum
+function getWeekBounds(date) {
+    const d = new Date(date);
+    const day = d.getDay() || 7; // Mo=1 ... So=7
+    if (day !== 1) d.setHours(-24 * (day - 1)); // Zurück zum Montag
+    
+    const monday = new Date(d);
+    const friday = new Date(d);
+    friday.setDate(monday.getDate() + 4); // +4 Tage = Freitag
+    
+    return { monday, friday };
+}
+
 function updateRangeInfo(labels, range) {
-    // Neue ID nutzen!
-    const el = document.getElementById('dynamic-range-text');
+    const el = document.getElementById('chart-date-range');
     if (!el || labels.length === 0) return;
 
     const start = labels[0];
-    const end = labels[labels.length - 1];
+    const end = labels[labels.length - 1]; // Nehmen wir das Enddatum als Referenz für die KW
     
-    const fDate = (d) => d.toLocaleDateString('de-DE', { day: '2-digit', month: '2-digit', year: 'numeric' }); // 12.10.2023
-    const fDateShort = (d) => d.toLocaleDateString('de-DE', { day: '2-digit', month: '2-digit' }); // 12.10.
-    const fMonthYear = (d) => d.toLocaleDateString('de-DE', { month: '2-digit', year: 'numeric' }); // 10.2023
+    const fDate = (d) => d.toLocaleDateString('de-DE', { day: '2-digit', month: '2-digit', year: 'numeric' });
+    const fMonthYear = (d) => d.toLocaleDateString('de-DE', { month: '2-digit', year: 'numeric' });
     const fYear = (d) => d.getFullYear(); 
+    const fmtTime = new Intl.DateTimeFormat('de-DE', { hour: '2-digit', minute: '2-digit' });
 
     let text = "";
 
     switch(range) {
         case '1d':
-            text = fDate(end); // "24.10.2023"
+            // "Handelstag: 22.12.2025 (Stand: 17:30)"
+            text = `Handelstag: ${fDate(end)} <span class="text-slate-400 ml-2 text-xs font-normal">(${fmtTime.format(end)})</span>`;
             break;
         case '5d':
+            // Echte Kalenderwoche berechnen (Mo - Fr)
             const kw = getWeekNumber(end);
-            // "KW 42 (16.10.2023 bis 20.10.2023)"
-            text = `KW ${kw} (${fDate(start)} bis ${fDate(end)})`;
+            const bounds = getWeekBounds(end);
+            
+            // Format: "KW 52 (22.12.2025 - 26.12.2025)"
+            text = `KW ${kw} (${fDate(bounds.monday)} – ${fDate(bounds.friday)})`;
             break;
         case '1mo':
         case '6mo':
-            // "10/2023 – 04/2024" (Slash Look)
             text = `${fMonthYear(start).replace('.','/')} – ${fMonthYear(end).replace('.','/')}`;
             break;
         case '1y':
             const y1 = fYear(start);
             const y2 = fYear(end);
-            text = (y1 === y2) ? `${y1}` : `${y1} bis ${y2}`;
+            text = (y1 === y2) ? `${y1}` : `${y1} – ${y2}`;
             break;
         default:
-            // "2020 bis 2025"
-            text = `${fYear(start)} bis ${fYear(end)}`;
+            text = `${fYear(start)} – ${fYear(end)}`;
             break;
     }
-    el.textContent = text;
+    // Icon davor setzen für Optik
+    el.innerHTML = `<i class="fa-regular fa-calendar-days mr-2 opacity-70"></i>${text}`;
 }
 
 export function renderChart(canvasId, rawData, range = '1y') {
@@ -117,7 +132,6 @@ export function renderChart(canvasId, rawData, range = '1y') {
                     callbacks: {
                         title: function(context) {
                             const d = labels[context[0].dataIndex];
-                            // Tooltip: Immer volles Datum + Uhrzeit bei kurzen Zeiträumen
                             if (range === '1d' || range === '5d') {
                                 return d.toLocaleDateString('de-DE', { weekday: 'short', day: '2-digit', month: '2-digit', hour: '2-digit', minute:'2-digit' });
                             }
@@ -136,16 +150,11 @@ export function renderChart(canvasId, rawData, range = '1y') {
                             const d = labels[index];
                             if (!d) return '';
                             
-                            // X-ACHSE FIX:
-                            // 1T: Uhrzeit (10:00)
                             if (range === '1d') return d.toLocaleTimeString('de-DE', { hour: '2-digit', minute:'2-digit' });
                             
-                            // 1W: Wochentag + Datum (Mo 12.10.) -> HIER WAR DER FEHLER
-                            if (range === '5d') {
-                                return d.toLocaleDateString('de-DE', { weekday: 'short', day: '2-digit', month: '2-digit' });
-                            }
+                            // 1W -> Wochentag + Datum (z.B. Mo 22.12.)
+                            if (range === '5d') return d.toLocaleDateString('de-DE', { weekday: 'short', day: '2-digit', month: '2-digit' });
                             
-                            // Rest: Datum (12.10.23)
                             return d.toLocaleDateString('de-DE', { day: '2-digit', month: '2-digit', year: '2-digit' });
                         }
                     }
