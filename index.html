@@ -1,6 +1,6 @@
 <!--
  * AlphaView Entry Point
- * Layout Update: Full Names in Modal Header & Trend Badge
+ * Update: Right-aligned Range Buttons & Adjusted Padding
 -->
 <!DOCTYPE html>
 <html lang="de" class="antialiased">
@@ -55,40 +55,29 @@
                         <button type="button" id="close-modal" class="text-slate-400 hover:text-slate-500 focus:outline-none"><i class="fa-solid fa-xmark text-2xl"></i></button>
                     </div>
                     <div class="p-6">
-                        <div class="flex flex-col gap-4 mb-4 pr-8">
-                            <div>
+                        <div class="flex flex-col gap-4 mb-4">
+                            <!-- Title Block (mit Padding rechts für Close Button) -->
+                            <div class="pr-8">
                                 <h3 class="text-2xl font-bold text-slate-900 dark:text-white leading-tight break-words" id="modal-fullname">Lade Titel...</h3>
                                 
-                                <!-- ROW 1: Basic Info -->
+                                <!-- ROW 1 -->
                                 <div class="flex flex-wrap gap-2 mt-3 text-xs font-mono text-slate-500 dark:text-slate-400 items-center">
-                                    <span class="bg-slate-100 dark:bg-slate-800 px-2 py-1 rounded border border-slate-200 dark:border-slate-600">
-                                        SYMBOL: <strong id="modal-symbol" class="text-slate-900 dark:text-slate-200">---</strong>
-                                    </span>
-                                    <span class="bg-slate-100 dark:bg-slate-800 px-2 py-1 rounded border border-slate-200 dark:border-slate-600">
-                                        BÖRSE: <strong id="modal-exchange" class="text-slate-900 dark:text-slate-200">---</strong>
-                                    </span>
-                                    <span class="bg-slate-100 dark:bg-slate-800 px-2 py-1 rounded border border-slate-200 dark:border-slate-600">
-                                        TYP: <strong id="modal-type" class="text-slate-900 dark:text-slate-200">---</strong>
-                                    </span>
-                                    <span class="bg-slate-100 dark:bg-slate-800 px-2 py-1 rounded border border-slate-200 dark:border-slate-600">
-                                        ZEITRAUM: <strong id="dynamic-range-text" class="text-slate-900 dark:text-slate-200">...</strong>
-                                    </span>
+                                    <span class="bg-slate-100 dark:bg-slate-800 px-2 py-1 rounded border border-slate-200 dark:border-slate-600">SYM: <strong id="modal-symbol" class="text-slate-900 dark:text-slate-200">---</strong></span>
+                                    <span class="bg-slate-100 dark:bg-slate-800 px-2 py-1 rounded border border-slate-200 dark:border-slate-600">BÖRSE: <strong id="modal-exchange" class="text-slate-900 dark:text-slate-200">---</strong></span>
+                                    <span class="bg-slate-100 dark:bg-slate-800 px-2 py-1 rounded border border-slate-200 dark:border-slate-600">TYP: <strong id="modal-type" class="text-slate-900 dark:text-slate-200">---</strong></span>
+                                    <span class="bg-slate-100 dark:bg-slate-800 px-2 py-1 rounded border border-slate-200 dark:border-slate-600">ZEIT: <strong id="dynamic-range-text" class="text-slate-900 dark:text-slate-200">...</strong></span>
                                 </div>
 
-                                <!-- ROW 2: Performance & Signals -->
+                                <!-- ROW 2 -->
                                 <div class="flex flex-wrap gap-2 mt-2 text-xs font-mono text-slate-500 dark:text-slate-400 items-center">
-                                    <span class="bg-slate-100 dark:bg-slate-800 px-2 py-1 rounded border border-slate-200 dark:border-slate-600">
-                                        PERFORMANCE: <strong id="chart-performance">...</strong>
-                                    </span>
-                                    <span class="bg-slate-100 dark:bg-slate-800 px-2 py-1 rounded border border-slate-200 dark:border-slate-600">
-                                        VOLATILITÄT: <strong id="modal-vol" class="text-slate-900 dark:text-slate-200">---</strong>
-                                    </span>
-                                    <span class="bg-slate-100 dark:bg-slate-800 px-2 py-1 rounded border border-slate-200 dark:border-slate-600">
-                                        TREND: <strong id="modal-trend" class="text-slate-900 dark:text-slate-200">---</strong>
-                                    </span>
+                                    <span class="bg-slate-100 dark:bg-slate-800 px-2 py-1 rounded border border-slate-200 dark:border-slate-600">PERFORMANCE: <strong id="chart-performance">...</strong></span>
+                                    <span class="bg-slate-100 dark:bg-slate-800 px-2 py-1 rounded border border-slate-200 dark:border-slate-600">VOLATILITÄT: <strong id="modal-vol" class="text-slate-900 dark:text-slate-200">---</strong></span>
+                                    <span class="bg-slate-100 dark:bg-slate-800 px-2 py-1 rounded border border-slate-200 dark:border-slate-600">TREND: <strong id="modal-trend" class="text-slate-900 dark:text-slate-200">---</strong></span>
                                 </div>
                             </div>
-                            <div class="w-full overflow-x-auto no-scrollbar pb-1">
+
+                            <!-- Controls (Rechtsbündig und Flush) -->
+                            <div class="w-full overflow-x-auto no-scrollbar pb-1 flex justify-end">
                                 <div class="flex bg-slate-100 dark:bg-slate-800 p-1 rounded-lg gap-1 min-w-max" id="chart-controls">
                                     <button data-range="1d" class="chart-range-btn px-3 py-1.5 text-xs font-bold rounded-md text-slate-600 dark:text-slate-400 hover:bg-white dark:hover:bg-slate-700 transition-all">1T</button>
                                     <button data-range="5d" class="chart-range-btn px-3 py-1.5 text-xs font-bold rounded-md text-slate-600 dark:text-slate-400 hover:bg-white dark:hover:bg-slate-700 transition-all">1W</button>
@@ -122,6 +111,6 @@
     </footer>
 
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-    <script type="module" src="js/app.js?v=Final42"></script>
+    <script type="module" src="js/app.js?v=44"></script>
 </body>
 </html>
