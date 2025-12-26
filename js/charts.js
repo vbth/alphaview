@@ -1,6 +1,7 @@
 /**
  * Charts Module
  * Renders interactive charts using Chart.js.
+ * Updated: Specific Date Range Formatting in Badge.
  */
 let chartInstance = null;
 
@@ -16,6 +17,7 @@ function getWeekNumber(d) {
     return Math.ceil((((d - yearStart) / 86400000) + 1) / 7);
 }
 
+// Logik für den Text im Badge (oben)
 function updateRangeInfo(labels, range) {
     const el = document.getElementById('chart-date-range');
     if (!el || labels.length === 0) return;
@@ -23,20 +25,42 @@ function updateRangeInfo(labels, range) {
     const start = labels[0];
     const end = labels[labels.length - 1];
     
-    const fmtDate = new Intl.DateTimeFormat('de-DE', { day: '2-digit', month: '2-digit', year: 'numeric' });
-    const fmtShort = new Intl.DateTimeFormat('de-DE', { day: '2-digit', month: '2-digit' });
-    const fmtTime = new Intl.DateTimeFormat('de-DE', { hour: '2-digit', minute: '2-digit' });
+    // Formatter
+    const fDate = (d) => d.toLocaleDateString('de-DE', { day: '2-digit', month: '2-digit', year: 'numeric' }); // TT.MM.JJJJ
+    const fMonthYear = (d) => d.toLocaleDateString('de-DE', { month: '2-digit', year: 'numeric' }); // MM.JJJJ
+    const fYear = (d) => d.getFullYear(); // JJJJ
 
     let text = "";
-    if (range === '1d') {
-        text = `<i class="fa-regular fa-calendar mr-2"></i>Handelstag: ${fmtDate.format(end)} <span class="text-slate-400 ml-2 text-xs font-normal">(Stand: ${fmtTime.format(end)})</span>`;
-    } else if (range === '5d') {
-        const kw = getWeekNumber(end);
-        text = `<i class="fa-solid fa-calendar-week mr-2"></i>KW ${kw} (${fmtShort.format(start)} - ${fmtDate.format(end)})`;
-    } else {
-        text = `<i class="fa-regular fa-calendar-days mr-2"></i>${fmtDate.format(start)} - ${fmtDate.format(end)}`;
+
+    switch(range) {
+        case '1d':
+            // Format: TT.MM.JJJJ
+            text = fDate(end);
+            break;
+        case '5d':
+            // Format: KWXX TT.MM.JJJJ - TT.MM.JJJJ
+            const kw = getWeekNumber(end);
+            text = `KW${kw} ${fDate(start)} bis ${fDate(end)}`;
+            break;
+        case '1mo':
+        case '6mo':
+            // Format: MM/JJJJ - MM/JJJJ
+            // replace '.' mit '/' für den gewünschten Look
+            text = `${fMonthYear(start).replace('.','/')} – ${fMonthYear(end).replace('.','/')}`;
+            break;
+        case '1y':
+            // Format: JJJJ oder JJJJ - JJJJ
+            const y1 = fYear(start);
+            const y2 = fYear(end);
+            text = (y1 === y2) ? `${y1}` : `${y1} bis ${y2}`;
+            break;
+        default:
+            // 5y, 10y, max -> Format: JJJJ - JJJJ
+            text = `${fYear(start)} bis ${fYear(end)}`;
+            break;
     }
-    el.innerHTML = text;
+
+    el.textContent = text;
 }
 
 export function renderChart(canvasId, rawData, range = '1y') {
@@ -96,6 +120,7 @@ export function renderChart(canvasId, rawData, range = '1y') {
                     callbacks: {
                         title: function(context) {
                             const d = labels[context[0].dataIndex];
+                            // Tooltip Formatierung (behalten wie vorher für gute UX)
                             if (range === '1d' || range === '5d') return d.toLocaleDateString('de-DE', { weekday: 'short', day: '2-digit', month: '2-digit', hour: '2-digit', minute:'2-digit' });
                             return d.toLocaleDateString('de-DE', { day: '2-digit', month: '2-digit', year: 'numeric' });
                         },
@@ -111,6 +136,7 @@ export function renderChart(canvasId, rawData, range = '1y') {
                         callback: function(val, index) {
                             const d = labels[index];
                             if (!d) return '';
+                            // Achsenbeschriftung (behalten wie vorher)
                             if (range === '1d') return d.toLocaleTimeString('de-DE', { hour: '2-digit', minute:'2-digit' });
                             if (range === '5d') return d.toLocaleDateString('de-DE', { weekday: 'short', day: '2-digit' });
                             return d.toLocaleDateString('de-DE', { day: '2-digit', month: '2-digit', year: '2-digit' });
