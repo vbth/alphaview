@@ -1,3 +1,7 @@
+/**
+ * Charts Module
+ * Fixed: Gaps & Axis Formatting
+ */
 let chartInstance = null;
 
 const formatCurrencyValue = (val, currency) => {
@@ -5,7 +9,21 @@ const formatCurrencyValue = (val, currency) => {
     return new Intl.NumberFormat(locale, { style: 'currency', currency: currency }).format(val);
 };
 
-export function renderChart(canvasId, rawData) {
+// Intelligenter Datumsformatierer
+function formatDateLabel(date, range) {
+    // Wenn Intraday (1d) oder Kurze Woche (5d) -> Uhrzeit zeigen
+    if (range === '1d' || range === '5d') {
+        return new Intl.DateTimeFormat('de-DE', { 
+            day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' 
+        }).format(date);
+    }
+    // Sonst nur Datum
+    return new Intl.DateTimeFormat('de-DE', { 
+        day: '2-digit', month: '2-digit', year: '2-digit' 
+    }).format(date);
+}
+
+export function renderChart(canvasId, rawData, range = '1y') {
     const canvas = document.getElementById(canvasId);
     if (!canvas) return;
     
@@ -18,8 +36,8 @@ export function renderChart(canvasId, rawData) {
 
     if (chartInstance) chartInstance.destroy();
 
-    const startPrice = prices[0];
-    const endPrice = prices[prices.length - 1];
+    const startPrice = prices.find(p => p !== null) || 0;
+    const endPrice = prices[prices.length - 1] || startPrice;
     const isBullish = endPrice >= startPrice;
     
     const lineColor = isBullish ? '#22c55e' : '#ef4444'; 
@@ -40,7 +58,8 @@ export function renderChart(canvasId, rawData) {
                 pointRadius: 0,
                 pointHoverRadius: 6,
                 fill: true,
-                tension: 0.15
+                tension: 0.1,
+                spanGaps: true // WICHTIG: Verbindet Linien bei fehlenden Daten
             }]
         },
         options: {
@@ -60,9 +79,7 @@ export function renderChart(canvasId, rawData) {
                     callbacks: {
                         title: function(context) {
                             const index = context[0].dataIndex;
-                            const date = labels[index];
-                            if(!date) return '';
-                            return date.toLocaleDateString('de-DE', { day: '2-digit', month: '2-digit', year: 'numeric' });
+                            return formatDateLabel(labels[index], range);
                         },
                         label: function(context) {
                             return formatCurrencyValue(context.parsed.y, currency);
@@ -80,8 +97,13 @@ export function renderChart(canvasId, rawData) {
                         autoSkip: true,
                         maxTicksLimit: 6,
                         callback: function(val, index) {
+                            // Zeige Uhrzeit nur bei 1d/5d
                             const d = labels[index];
                             if (!d) return '';
+                            
+                            if (range === '1d' || range === '5d') {
+                                return d.toLocaleTimeString('de-DE', { hour: '2-digit', minute:'2-digit' });
+                            }
                             return d.toLocaleDateString('de-DE', { day: '2-digit', month: '2-digit', year: '2-digit' });
                         }
                     }

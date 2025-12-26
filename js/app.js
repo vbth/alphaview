@@ -193,25 +193,102 @@ async function loadChartForModal(symbol, requestedRange) {
     if(canvas) canvas.style.opacity = '0.5';
 
     try {
-        // INTERVAL LOGIK für kurze Zeiträume
         let interval = '1d';
-        if (requestedRange === '1d') {
-            interval = '5m'; // Intraday
-        } else if (requestedRange === '5d') {
-            interval = '15m'; // 5 Tage
-        } else if (requestedRange === '1mo' || requestedRange === '3mo') {
-            interval = '1d'; // Standard für Monate
-        } else if (requestedRange === '5y' || requestedRange === '10y') {
-            interval = '1wk'; // Langzeit
-        } else if (requestedRange === 'max') {
-            interval = '1mo'; // Sehr langfristig
-        }
+        // Smart Intervals
+        if (requestedRange === '1d') interval = '5m';
+        else if (requestedRange === '5d') interval = '15m';
+        else if (requestedRange === '1mo' || requestedRange === '3mo') interval = '1d'; // Daily ist stabiler als hourly
+        else if (requestedRange === '5y' || requestedRange === '10y') interval = '1wk';
+        else if (requestedRange === 'max') interval = '1mo';
 
         const rawData = await fetchChartData(symbol, requestedRange, interval);
         if(rawData) {
-            renderChart(canvasId, rawData);
+            // WICHTIG: requestedRange weitergeben!
+            renderChart(canvasId, rawData, requestedRange);
+
             if(rawData.meta) {
                 if(modalExchange) modalExchange.textContent = rawData.meta.exchangeName || rawData.meta.exchangeTimezoneName || 'N/A';
-                
                 const rawType = rawData.meta.instrumentType || 'EQUITY';
-                if(modalType) modalType.textContent = TYPE_TRANSLATIONS[rawTy
+                if(modalType) modalType.textContent = TYPE_TRANSLATIONS[rawType] || rawType;
+                const fullName = rawData.meta.longName || rawData.meta.shortName || symbol;
+                if(modalFullname) modalFullname.textContent = fullName; 
+            }
+        }
+    } catch (e) { console.error(e); if(modalFullname) modalFullname.textContent = "Fehler"; } 
+    finally { if(canvas) canvas.style.opacity = '1'; }
+}
+
+rangeBtns.forEach(btn => {
+    btn.addEventListener('click', () => {
+        if(!state.currentSymbol) return;
+        const range = btn.dataset.range;
+        state.currentRange = range;
+        updateRangeButtonsUI(range);
+        loadChartForModal(state.currentSymbol, range);
+    });
+});
+
+function initSearch() {
+    const input = document.getElementById('search-input');
+    const resultsContainer = document.getElementById('search-results');
+    const spinner = document.getElementById('search-spinner');
+
+    if(!input) return;
+
+    document.addEventListener('click', (e) => {
+        if (!e.target.closest('#search-input') && !e.target.closest('#search-results')) resultsContainer.classList.add('hidden');
+    });
+
+    input.addEventListener('keydown', (e) => {
+        if (e.key === 'Enter') {
+            const val = input.value.trim().toUpperCase();
+            if (val.length > 0) {
+                if(addSymbol(val)) {
+                    console.log(`Manuell hinzugefügt: ${val}`);
+                }
+                input.value = '';
+                resultsContainer.classList.add('hidden');
+                loadDashboard();
+            }
+        }
+    });
+
+    input.addEventListener('input', (e) => {
+        const query = e.target.value.trim();
+        clearTimeout(state.searchDebounce);
+        if (query.length < 2) { resultsContainer.classList.add('hidden'); return; }
+        spinner.classList.remove('hidden');
+        state.searchDebounce = setTimeout(async () => {
+            const results = await searchSymbol(query);
+            spinner.classList.add('hidden');
+            renderSearchResults(results, resultsContainer);
+            document.querySelectorAll('.search-item').forEach(item => {
+                item.addEventListener('click', () => {
+                    addSymbol(item.dataset.symbol);
+                    input.value = '';
+                    resultsContainer.classList.add('hidden');
+                    loadDashboard();
+                });
+            });
+        }, 500);
+    });
+}
+
+document.addEventListener('DOMContentLoaded', async () => {
+    const currentTheme = initTheme();
+    const updateIcon = (mode) => {
+        const icon = themeBtn?.querySelector('i');
+        if(icon) {
+            if (mode === 'dark') { icon.classList.remove('fa-moon'); icon.classList.add('fa-sun'); } 
+            else { icon.classList.remove('fa-sun'); icon.classList.add('fa-moon'); }
+        }
+    };
+    updateIcon(currentTheme);
+    if(themeBtn) themeBtn.addEventListener('click', () => updateIcon(toggleTheme()));
+
+    renderAppSkeleton(rootEl);
+    closeModalBtns.forEach(btn => btn?.addEventListener('click', closeModal));
+    if(modal) modal.addEventListener('click', (e) => { if(e.target === modal) closeModal(); });
+    initSearch();
+    loadDashboard();
+});
