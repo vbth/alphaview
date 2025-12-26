@@ -1,7 +1,13 @@
 /**
  * App Module
- * Updated: Dashboard Range Buttons Logic
+ * ==========
+ * Der Haupt-Controller der Anwendung.
+ * - Initialisiert die App beim Start.
+ * - Reagiert auf Benutzereingaben (Klicks, Suche, Input-Changes).
+ * - Koordiniert den Datenfluss zwischen API, Store und UI.
+ * - Berechnet den Gesamtwert des Portfolios inkl. Währungsumrechnung.
  */
+
 import { initTheme, toggleTheme } from './theme.js';
 import { fetchChartData, searchSymbol } from './api.js';
 import { analyze } from './analysis.js';
@@ -9,11 +15,20 @@ import { getWatchlist, addSymbol, removeSymbol, updateQuantity, updateUrl } from
 import { renderAppSkeleton, createStockCardHTML, renderSearchResults, formatMoney } from './ui.js';
 import { renderChart } from './charts.js';
 
-// Add currentDashboardRange to state
-const state = { searchDebounce: null, currentSymbol: null, currentRange: '1y', currentDashboardRange: '1d', dashboardData: [], eurUsdRate: 1.08 };
+// Globaler Status
+const state = { 
+    searchDebounce: null, 
+    currentSymbol: null, 
+    currentRange: '1y', 
+    currentDashboardRange: '1d', // Standard für Dashboard
+    dashboardData: [], 
+    eurUsdRate: 1.08 // Fallback Wechselkurs
+};
+
+// DOM Referenzen
 const rootEl = document.getElementById('app-root');
 const themeBtn = document.getElementById('theme-toggle');
-// ... other DOM elements ...
+// Modal Elemente
 const modal = document.getElementById('chart-modal');
 const modalFullname = document.getElementById('modal-fullname');
 const modalSymbol = document.getElementById('modal-symbol');
@@ -23,8 +38,14 @@ const modalTrend = document.getElementById('modal-trend');
 const modalVol = document.getElementById('modal-vol');
 const closeModalBtns = [document.getElementById('close-modal'), document.getElementById('close-modal-btn')];
 const rangeBtns = document.querySelectorAll('.chart-range-btn');
+
+// Übersetzungen für Instrumenten-Typen
 const TYPE_TRANSLATIONS = { 'EQUITY': 'AKTIE', 'ETF': 'ETF', 'MUTUALFUND': 'FONDS', 'INDEX': 'INDEX', 'CRYPTOCURRENCY': 'KRYPTO', 'CURRENCY': 'DEVISEN', 'FUTURE': 'FUTURE', 'OPTION': 'OPTION' };
 
+/**
+ * Hauptfunktion: Lädt das Dashboard.
+ * Holt Daten für alle Aktien, berechnet Metriken und rendert das Grid.
+ */
 async function loadDashboard() {
     const watchlist = getWatchlist();
     const gridEl = document.getElementById('dashboard-grid');
@@ -32,7 +53,7 @@ async function loadDashboard() {
     const summaryEl = document.getElementById('portfolio-summary');
     const dashRangeBtns = document.querySelectorAll('.dash-range-btn');
 
-    // UI Updates for Dashboard Buttons
+    // Dashboard Buttons stylen
     dashRangeBtns.forEach(btn => {
         const r = btn.dataset.range;
         if(r === state.currentDashboardRange) {
@@ -42,14 +63,15 @@ async function loadDashboard() {
             btn.classList.add('text-slate-500', 'dark:text-slate-400', 'hover:bg-slate-50', 'dark:hover:bg-slate-700');
             btn.classList.remove('bg-slate-100', 'dark:bg-slate-600', 'text-primary', 'dark:text-white');
         }
-        // Event Listener (nur einmal hinzufügen wäre besser, aber hier pragmatisch)
         btn.onclick = () => {
             state.currentDashboardRange = r;
-            loadDashboard(); // Reload with new range
+            loadDashboard(); // Reload bei Klick
         };
     });
 
     if (!gridEl) return;
+    
+    // Leeres Portfolio Handling
     if (watchlist.length === 0) {
         gridEl.innerHTML = '';
         if(emptyStateEl) emptyStateEl.classList.remove('hidden');
@@ -59,91 +81,119 @@ async function loadDashboard() {
     if(emptyStateEl) emptyStateEl.classList.add('hidden');
     if(summaryEl) summaryEl.classList.remove('hidden');
     
-    // Only show spinner if we have no data yet
+    // Spinner nur beim ersten Laden
     if(state.dashboardData.length === 0) gridEl.innerHTML = '<div class="col-span-full text-center text-slate-400 py-8 animate-pulse">Lade Kurse & Wechselkurse...</div>';
 
     try {
+        // 1. Wechselkurs holen (EUR/USD)
         let rateData = null;
         try { rateData = await fetchChartData('EURUSD=X', '5d', '1d'); } catch (e) {}
+        
+        // 2. Daten für alle Aktien holen (Parallel)
         const stockPromises = watchlist.map(async (item) => {
             try {
-                // HIER: Nutze state.currentDashboardRange statt fix '1y'
-                // Intervall Logik:
+                // Zeitraum-Logik für Dashboard
                 let interval = '1d';
-                if(state.currentDashboardRange === '1d') interval = '5m';
-                else if(state.currentDashboardRange === '1W') interval = '15m'; // using 1W here as per your button, API expects 5d usually but we map in fetch logic or just pass it. Wait, fetchChartData uses what logic?
-                // Adjusting fetchChartData inputs:
-                // Yahoo API: range must be standard. My UI uses "1W", API uses "5d". Mapping needed.
                 let apiRange = state.currentDashboardRange;
+                
+                // Mapping für Yahoo API
                 if(apiRange === '1W') { apiRange = '5d'; interval = '15m'; }
                 if(apiRange === '1d') interval = '5m';
                 if(apiRange === '1mo') interval = '1d';
 
                 const rawData = await fetchChartData(item.symbol, apiRange, interval);
                 if (!rawData) return null;
+                
                 const analysis = analyze(rawData);
                 analysis.qty = item.qty;
                 analysis.url = item.url;
                 return analysis;
             } catch (e) { return null; }
         });
+
         const stockResults = await Promise.all(stockPromises);
+        
+        // Wechselkurs setzen
         if(rateData && rateData.indicators && rateData.indicators.quote[0].close) {
             const closes = rateData.indicators.quote[0].close;
             const currentRate = closes.filter(c => c).pop();
             if(currentRate) state.eurUsdRate = currentRate;
         }
+
         state.dashboardData = stockResults.filter(r => r !== null);
         renderDashboardGrid();
     } catch (criticalError) { console.error("Dashboard Error:", criticalError); }
 }
 
+/**
+ * Rendert das Grid basierend auf state.dashboardData
+ */
 function renderDashboardGrid() {
     const gridEl = document.getElementById('dashboard-grid');
     const totalEurEl = document.getElementById('total-balance-eur');
     const totalUsdEl = document.getElementById('total-balance-usd');
     const totalPosEl = document.getElementById('total-positions');
     if (!totalEurEl) return;
+    
     let totalEUR = 0;
+    
+    // Gesamtwert berechnen
     state.dashboardData.forEach(item => {
         const rawValue = item.price * item.qty;
         if (item.currency === 'EUR') totalEUR += rawValue;
         else if (item.currency === 'USD') totalEUR += (rawValue / state.eurUsdRate);
-        else totalEUR += rawValue;
+        else totalEUR += rawValue; // Fallback 1:1
     });
+
     const totalUSD = totalEUR * state.eurUsdRate;
+    
+    // Header updaten
     if(totalEurEl) totalEurEl.textContent = formatMoney(totalEUR, 'EUR');
     if(totalUsdEl) totalUsdEl.textContent = formatMoney(totalUSD, 'USD');
     if(totalPosEl) totalPosEl.textContent = state.dashboardData.length;
-    gridEl.innerHTML = state.dashboardData.map(data => createStockCardHTML(data, data.qty, data.url, totalEUR, state.eurUsdRate)).join('');
+    
+    // Grid rendern
+    gridEl.innerHTML = state.dashboardData.map(data => 
+        createStockCardHTML(data, data.qty, data.url, totalEUR, state.eurUsdRate)
+    ).join('');
+    
     attachDashboardEvents();
 }
 
+/**
+ * Bindet Event Listener an die dynamisch erzeugten Karten
+ */
 function attachDashboardEvents() {
+    // Löschen
     document.querySelectorAll('.delete-btn').forEach(btn => {
         btn.addEventListener('click', (e) => {
             e.stopPropagation();
             if(confirm(`${e.currentTarget.dataset.symbol} entfernen?`)) { removeSymbol(e.currentTarget.dataset.symbol); loadDashboard(); }
         });
     });
+    // Modal öffnen (Klick auf Karte)
     document.querySelectorAll('.stock-card').forEach(card => {
         card.addEventListener('click', (e) => {
+            // Ignoriere Klicks auf Inputs oder Links
             if(e.target.tagName === 'INPUT' || e.target.tagName === 'A' || e.target.closest('a') || e.target.closest('.delete-btn')) return;
             openModal(e.currentTarget.dataset.symbol);
         });
     });
+    // Menge ändern
     document.querySelectorAll('.qty-input').forEach(input => {
         input.addEventListener('change', (e) => {
             const sym = e.target.dataset.symbol;
             const newQty = parseFloat(e.target.value);
             if(isNaN(newQty) || newQty < 0) return;
             updateQuantity(sym, newQty);
+            // State Update ohne Reload
             const item = state.dashboardData.find(d => d.symbol === sym);
             if(item) item.qty = newQty;
             renderDashboardGrid();
         });
         input.addEventListener('click', (e) => e.stopPropagation());
     });
+    // URL ändern
     document.querySelectorAll('.url-input').forEach(input => {
         input.addEventListener('change', (e) => {
             const sym = e.target.dataset.symbol;
@@ -157,7 +207,8 @@ function attachDashboardEvents() {
     });
 }
 
-// ... Rest of modal logic ...
+// --- MODAL LOGIC ---
+
 async function openModal(symbol) {
     if(!modal) return;
     state.currentSymbol = symbol;
@@ -166,26 +217,33 @@ async function openModal(symbol) {
     modalSymbol.textContent = symbol;
     modalExchange.textContent = '...';
     modalType.textContent = '...';
+    
+    // Reset
     const rangeText = document.getElementById('dynamic-range-text');
     if(rangeText) rangeText.textContent = 'Lade...';
     if(modalVol) modalVol.textContent = '---';
     if(modalTrend) modalTrend.textContent = '---';
+
     modal.classList.remove('hidden');
     updateRangeButtonsUI('1y');
     await loadChartForModal(symbol, '1y');
 }
+
 function closeModal() { if(modal) modal.classList.add('hidden'); state.currentSymbol = null; }
+
 function updateRangeButtonsUI(activeRange) {
     rangeBtns.forEach(btn => {
         const range = btn.dataset.range;
-        btn.classList.remove('bg-white', 'dark:bg-slate-600', 'text-primary', 'dark:text-white', 'shadow-sm');
-        btn.classList.add('text-slate-600', 'dark:text-slate-400', 'hover:bg-white');
         if(range === activeRange) {
             btn.classList.remove('text-slate-600', 'dark:text-slate-400', 'hover:bg-white');
             btn.classList.add('bg-white', 'dark:bg-slate-600', 'text-primary', 'dark:text-white', 'shadow-sm');
+        } else {
+            btn.classList.add('text-slate-600', 'dark:text-slate-400', 'hover:bg-white');
+            btn.classList.remove('bg-white', 'dark:bg-slate-600', 'text-primary', 'dark:text-white', 'shadow-sm');
         }
     });
 }
+
 async function loadChartForModal(symbol, requestedRange) {
     const canvasId = 'main-chart';
     const canvas = document.getElementById(canvasId);
@@ -197,16 +255,19 @@ async function loadChartForModal(symbol, requestedRange) {
         else if (requestedRange === '1mo' || requestedRange === '3mo') interval = '1d';
         else if (requestedRange === '5y' || requestedRange === '10y') interval = '1wk';
         else if (requestedRange === 'max') interval = '1mo';
+
         const rawData = await fetchChartData(symbol, requestedRange, interval);
         if(rawData) {
             const analysis = analyze(rawData);
             renderChart(canvasId, rawData, requestedRange, analysis);
+            
             if(rawData.meta) {
                 if(modalExchange) modalExchange.textContent = rawData.meta.exchangeName || rawData.meta.exchangeTimezoneName || 'N/A';
                 const rawType = rawData.meta.instrumentType || 'EQUITY';
                 if(modalType) modalType.textContent = TYPE_TRANSLATIONS[rawType] || rawType;
                 const fullName = rawData.meta.longName || rawData.meta.shortName || symbol;
                 if(modalFullname) modalFullname.textContent = fullName; 
+                
                 if(analysis) {
                     if(modalVol) modalVol.textContent = analysis.volatility ? analysis.volatility.toFixed(1) + '%' : 'n/a';
                     if(modalTrend) {
@@ -223,6 +284,7 @@ async function loadChartForModal(symbol, requestedRange) {
     } catch (e) { console.error(e); if(modalFullname) modalFullname.textContent = "Fehler"; } 
     finally { if(canvas) canvas.style.opacity = '1'; }
 }
+
 rangeBtns.forEach(btn => {
     btn.addEventListener('click', () => {
         if(!state.currentSymbol) return;
@@ -232,6 +294,9 @@ rangeBtns.forEach(btn => {
         loadChartForModal(state.currentSymbol, range);
     });
 });
+
+// --- INIT ---
+
 function initSearch() {
     const input = document.getElementById('search-input');
     const resultsContainer = document.getElementById('search-results');
@@ -269,6 +334,8 @@ function initSearch() {
         }, 500);
     });
 }
+
+// App Start
 document.addEventListener('DOMContentLoaded', async () => {
     const currentTheme = initTheme();
     const updateIcon = (mode) => { const icon = themeBtn?.querySelector('i'); if(icon) { if (mode === 'dark') { icon.classList.remove('fa-moon'); icon.classList.add('fa-sun'); } else { icon.classList.remove('fa-sun'); icon.classList.add('fa-moon'); } } };
@@ -279,12 +346,14 @@ document.addEventListener('DOMContentLoaded', async () => {
     if(modal) modal.addEventListener('click', (e) => { if(e.target === modal) closeModal(); });
     initSearch();
     loadDashboard();
-    // (Restliche Button-Listener für Import/Export bleiben gleich wie vorher)
+
+    // Export/Import Buttons Logic
     const exportBtn = document.getElementById('export-btn');
     const importBtn = document.getElementById('import-btn');
     const importInput = document.getElementById('import-input');
     const copyBtn = document.getElementById('copy-list-btn');
     const copyUrlsBtn = document.getElementById('copy-urls-btn');
+
     if(copyBtn) {
         copyBtn.addEventListener('click', () => {
             if(!state.dashboardData || state.dashboardData.length === 0) { alert("Keine Daten."); return; }
@@ -312,6 +381,7 @@ document.addEventListener('DOMContentLoaded', async () => {
             }).catch(err => alert('Fehler beim Kopieren.'));
         });
     }
+
     if(copyUrlsBtn) {
         copyUrlsBtn.addEventListener('click', () => {
             if(!state.dashboardData || state.dashboardData.length === 0) { alert("Keine Daten."); return; }
@@ -333,6 +403,7 @@ document.addEventListener('DOMContentLoaded', async () => {
             });
         });
     }
+
     if(exportBtn) {
         exportBtn.addEventListener('click', () => {
             const data = localStorage.getItem('alphaview_portfolio');
@@ -349,6 +420,7 @@ document.addEventListener('DOMContentLoaded', async () => {
             URL.revokeObjectURL(url);
         });
     }
+
     if(importBtn && importInput) {
         importBtn.addEventListener('click', () => {
             if(localStorage.getItem('alphaview_portfolio') && localStorage.getItem('alphaview_portfolio') !== '[]') {

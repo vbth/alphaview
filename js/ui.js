@@ -1,376 +1,173 @@
 /**
- * App Module
- * Updated: Dashboard Range Buttons Logic
+ * UI Module
+ * =========
+ * Erzeugt HTML-Strings für das Dashboard, die Karten und die Suche.
+ * Beinhaltet Formatierungsfunktionen für Geld und Prozent.
  */
-import { initTheme, toggleTheme } from './theme.js';
-import { fetchChartData, searchSymbol } from './api.js';
-import { analyze } from './analysis.js';
-import { getWatchlist, addSymbol, removeSymbol, updateQuantity, updateUrl } from './store.js';
-import { renderAppSkeleton, createStockCardHTML, renderSearchResults, formatMoney } from './ui.js';
-import { renderChart } from './charts.js';
 
-// Add currentDashboardRange to state
-const state = { searchDebounce: null, currentSymbol: null, currentRange: '1y', currentDashboardRange: '1d', dashboardData: [], eurUsdRate: 1.08 };
-const rootEl = document.getElementById('app-root');
-const themeBtn = document.getElementById('theme-toggle');
-// ... other DOM elements ...
-const modal = document.getElementById('chart-modal');
-const modalFullname = document.getElementById('modal-fullname');
-const modalSymbol = document.getElementById('modal-symbol');
-const modalExchange = document.getElementById('modal-exchange');
-const modalType = document.getElementById('modal-type');
-const modalTrend = document.getElementById('modal-trend');
-const modalVol = document.getElementById('modal-vol');
-const closeModalBtns = [document.getElementById('close-modal'), document.getElementById('close-modal-btn')];
-const rangeBtns = document.querySelectorAll('.chart-range-btn');
-const TYPE_TRANSLATIONS = { 'EQUITY': 'AKTIE', 'ETF': 'ETF', 'MUTUALFUND': 'FONDS', 'INDEX': 'INDEX', 'CRYPTOCURRENCY': 'KRYPTO', 'CURRENCY': 'DEVISEN', 'FUTURE': 'FUTURE', 'OPTION': 'OPTION' };
+// Formatiert Währung (Komma statt Punkt bei EUR)
+export const formatMoney = (val, currency) => {
+    const locale = (currency === 'EUR') ? 'de-DE' : 'en-US';
+    return new Intl.NumberFormat(locale, { style: 'currency', currency: currency }).format(val);
+};
 
-async function loadDashboard() {
-    const watchlist = getWatchlist();
-    const gridEl = document.getElementById('dashboard-grid');
-    const emptyStateEl = document.getElementById('empty-state');
-    const summaryEl = document.getElementById('portfolio-summary');
-    const dashRangeBtns = document.querySelectorAll('.dash-range-btn');
+// Formatiert Prozent (immer mit Komma)
+const formatPercent = (val) => {
+    const sign = val >= 0 ? '+' : '';
+    return `${sign}${val.toFixed(2).replace('.', ',')}%`;
+};
 
-    // UI Updates for Dashboard Buttons
-    dashRangeBtns.forEach(btn => {
-        const r = btn.dataset.range;
-        if(r === state.currentDashboardRange) {
-            btn.classList.remove('text-slate-500', 'dark:text-slate-400', 'hover:bg-slate-50', 'dark:hover:bg-slate-700');
-            btn.classList.add('bg-slate-100', 'dark:bg-slate-600', 'text-primary', 'dark:text-white');
-        } else {
-            btn.classList.add('text-slate-500', 'dark:text-slate-400', 'hover:bg-slate-50', 'dark:hover:bg-slate-700');
-            btn.classList.remove('bg-slate-100', 'dark:bg-slate-600', 'text-primary', 'dark:text-white');
-        }
-        // Event Listener (nur einmal hinzufügen wäre besser, aber hier pragmatisch)
-        btn.onclick = () => {
-            state.currentDashboardRange = r;
-            loadDashboard(); // Reload with new range
-        };
-    });
+// Erzeugt das Grundgerüst des Dashboards
+export function renderAppSkeleton(container) {
+    container.innerHTML = `
+        <!-- HEADER STATS (Mobil linksbündig, Desktop zentriert/rechts) -->
+        <div id="portfolio-summary" class="hidden mb-8 bg-white dark:bg-dark-surface rounded-xl p-6 shadow-sm border border-slate-200 dark:border-slate-700 flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+            <div>
+                <h2 class="text-sm font-medium text-slate-500 dark:text-slate-400 uppercase tracking-wider mb-2">Gesamtdepotwert</h2>
+                <div class="text-4xl font-bold text-slate-900 dark:text-white" id="total-balance-eur">---</div>
+                <div class="text-lg font-mono font-medium text-slate-500 dark:text-slate-400 mt-1" id="total-balance-usd">---</div>
+            </div>
+            <div class="flex gap-8 text-left md:text-right w-full md:w-auto">
+                <div>
+                    <div class="text-xs text-slate-500">Positionen</div>
+                    <div class="text-xl font-mono font-medium dark:text-slate-200" id="total-positions">0</div>
+                </div>
+            </div>
+        </div>
 
-    if (!gridEl) return;
-    if (watchlist.length === 0) {
-        gridEl.innerHTML = '';
-        if(emptyStateEl) emptyStateEl.classList.remove('hidden');
-        if(summaryEl) summaryEl.classList.add('hidden');
+        <!-- SUCHLEISTE -->
+        <div class="mb-4 relative max-w-xl mx-auto">
+            <div class="relative">
+                <input type="text" id="search-input" class="w-full bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-600 text-slate-900 dark:text-white rounded-lg pl-12 pr-4 py-3 shadow-sm focus:ring-2 focus:ring-primary outline-none" placeholder="Suche Name oder Symbol..." autocomplete="off">
+                <i class="fa-solid fa-magnifying-glass absolute left-4 top-3.5 text-slate-400"></i>
+                <div id="search-spinner" class="hidden absolute right-4 top-3.5"><i class="fa-solid fa-circle-notch fa-spin text-primary"></i></div>
+            </div>
+            <p class="text-xs text-slate-400 dark:text-slate-500 mt-2 ml-1"><i class="fa-solid fa-circle-info mr-1"></i>Tipp: ETF nicht gefunden? Tippe das Kürzel (z.B. <code class="bg-slate-100 dark:bg-slate-700 px-1 rounded">EUNL.DE</code>) und drücke <strong>ENTER</strong>.</p>
+            <div id="search-results" class="hidden absolute w-full bg-white dark:bg-slate-800 mt-2 rounded-lg shadow-xl border border-slate-200 dark:border-slate-700 z-50 overflow-hidden max-h-80 overflow-y-auto"></div>
+        </div>
+
+        <!-- DASHBOARD ZEITRAUM STEUERUNG -->
+        <div class="mb-8 flex justify-center overflow-x-auto no-scrollbar py-2">
+            <div class="flex bg-white dark:bg-dark-surface p-1 rounded-lg border border-slate-200 dark:border-slate-700 shadow-sm" id="dashboard-range-controls">
+                <button data-range="1d" class="dash-range-btn px-4 py-1.5 text-xs font-bold rounded-md bg-slate-100 dark:bg-slate-600 text-primary dark:text-white transition-all">1T</button>
+                <button data-range="1W" class="dash-range-btn px-4 py-1.5 text-xs font-bold rounded-md text-slate-500 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-700 transition-all">1W</button>
+                <button data-range="1mo" class="dash-range-btn px-4 py-1.5 text-xs font-bold rounded-md text-slate-500 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-700 transition-all">1M</button>
+                <button data-range="6mo" class="dash-range-btn px-4 py-1.5 text-xs font-bold rounded-md text-slate-500 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-700 transition-all">6M</button>
+                <button data-range="1y" class="dash-range-btn px-4 py-1.5 text-xs font-bold rounded-md text-slate-500 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-700 transition-all">1J</button>
+                <button data-range="5y" class="dash-range-btn px-4 py-1.5 text-xs font-bold rounded-md text-slate-500 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-700 transition-all">5J</button>
+                <button data-range="max" class="dash-range-btn px-4 py-1.5 text-xs font-bold rounded-md text-slate-500 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-700 transition-all">MAX</button>
+            </div>
+        </div>
+
+        <!-- GRID CONTAINER -->
+        <div id="dashboard-grid" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6"></div>
+        
+        <!-- EMPTY STATE -->
+        <div id="empty-state" class="hidden text-center py-12">
+            <div class="inline-flex items-center justify-center w-16 h-16 rounded-full bg-slate-100 dark:bg-slate-800 mb-4"><i class="fa-solid fa-layer-group text-slate-400 text-2xl"></i></div>
+            <h3 class="text-lg font-medium text-slate-900 dark:text-white">Watchlist leer</h3>
+            <p class="text-slate-500 max-w-sm mx-auto mt-2">Suche oben nach Wertpapieren.</p>
+        </div>
+    `;
+}
+
+// Erzeugt eine einzelne Aktien-Karte
+export function createStockCardHTML(data, qty, url, totalPortfolioValueEUR, eurUsdRate) {
+    const isUp = data.change >= 0;
+    const colorClass = isUp ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400';
+    const trendIcon = data.trend === 'bullish' ? 'fa-arrow-trend-up' : (data.trend === 'bearish' ? 'fa-arrow-trend-down' : 'fa-minus');
+    
+    // Berechnungen für Wert und Gewichtung
+    const positionValueNative = data.price * qty;
+    let positionValueEUR = positionValueNative;
+    if (data.currency === 'USD') positionValueEUR = positionValueNative / eurUsdRate;
+    
+    const weightPercent = totalPortfolioValueEUR > 0 ? (positionValueEUR / totalPortfolioValueEUR) * 100 : 0;
+    const safeUrl = url || '';
+
+    return `
+        <div class="stock-card group relative bg-white dark:bg-dark-surface rounded-xl shadow-sm border border-slate-200 dark:border-slate-700 hover:shadow-lg hover:border-primary/50 dark:hover:border-neon-accent/50 transition-all duration-300 cursor-pointer overflow-hidden" data-symbol="${data.symbol}">
+            <div class="p-5">
+                <!-- HEADER -->
+                <div class="flex justify-between items-start mb-4 gap-4">
+                    <div class="flex-grow min-w-0 pr-2"> 
+                        <h3 class="text-lg font-bold text-slate-900 dark:text-white tracking-tight truncate" title="${data.name}">${data.name}</h3>
+                        <div class="flex items-center gap-2 text-xs font-mono text-slate-500 mt-1"><span class="font-bold text-slate-700 dark:text-slate-300">${data.symbol}</span><span class="bg-slate-100 dark:bg-slate-700 px-1.5 py-0.5 rounded">${data.currency}</span></div>
+                    </div>
+                    <div class="text-right whitespace-nowrap pt-1 mr-8">
+                        <div class="text-xl font-bold font-mono text-slate-900 dark:text-slate-100">${formatMoney(data.price, data.currency)}</div>
+                        <div class="text-sm font-medium font-mono ${colorClass}">${formatPercent(data.changePercent)}</div>
+                    </div>
+                </div>
+
+                <!-- INFO BOX (Eingabefelder) -->
+                <div class="bg-slate-50 dark:bg-slate-800/50 rounded-lg p-3 mb-4 border border-slate-100 dark:border-slate-700" onclick="event.stopPropagation()">
+                    <!-- Wert & Anteil -->
+                    <div class="flex justify-between items-center border-b border-slate-200 dark:border-slate-700 pb-2 mb-2">
+                        <div class="flex items-center gap-2">
+                            <i class="fa-solid fa-coins text-slate-400 text-xs"></i>
+                            <div class="font-mono font-bold text-slate-900 dark:text-white">${formatMoney(positionValueNative, data.currency)}</div>
+                        </div>
+                        <div class="flex items-center gap-2">
+                            <i class="fa-solid fa-chart-pie text-slate-400 text-xs"></i>
+                            <div class="text-xs font-mono text-slate-500 dark:text-slate-300">${formatPercent(weightPercent)}</div>
+                        </div>
+                    </div>
+                    <!-- Menge -->
+                    <div class="flex justify-between items-center mb-2">
+                        <div class="flex items-center gap-2">
+                            <i class="fa-solid fa-layer-group text-slate-400 text-xs"></i>
+                            <label class="text-xs text-slate-500">Menge</label>
+                        </div>
+                        <input type="number" min="0" step="any" class="qty-input w-24 text-right text-sm bg-white dark:bg-slate-700 border border-slate-200 dark:border-slate-600 rounded px-2 py-1 focus:ring-2 focus:ring-primary outline-none" value="${qty}" data-symbol="${data.symbol}" placeholder="0">
+                    </div>
+                    <!-- URL -->
+                    <div class="flex items-center gap-2 pt-1">
+                        <i class="fa-solid fa-link text-slate-400 text-xs"></i>
+                        <input type="text" class="url-input w-full text-xs bg-transparent border-none focus:ring-0 text-slate-600 dark:text-slate-400 placeholder-slate-400" value="${safeUrl}" data-symbol="${data.symbol}" placeholder="Info-Link...">
+                        ${safeUrl ? `<a href="${safeUrl}" target="_blank" class="text-primary hover:text-blue-600" title="Öffnen"><i class="fa-solid fa-external-link-alt"></i></a>` : ''}
+                    </div>
+                </div>
+
+                <!-- FOOTER (Metriken & Delete Link) -->
+                <div class="flex items-center justify-between text-xs text-slate-500 dark:text-slate-400 mt-4 border-t border-slate-50 dark:border-slate-800 pt-3">
+                    <div class="flex items-center gap-2">
+                        <div class="flex items-center gap-1"><i class="fa-solid ${trendIcon}"></i> ${data.trend}</div>
+                        <span class="text-slate-300 dark:text-slate-600">•</span>
+                        <div>VOLATILITÄT: ${data.volatility.toFixed(1)}%</div>
+                    </div>
+                    <button class="delete-btn text-slate-400 hover:text-red-500 transition-colors flex items-center gap-1.5 px-2 py-1 hover:bg-red-50 dark:hover:bg-red-900/20 rounded" data-symbol="${data.symbol}" title="Entfernen">
+                        <i class="fa-solid fa-trash-can"></i> Entfernen
+                    </button>
+                </div>
+            </div>
+            
+            <div class="h-1 w-full ${isUp ? 'bg-green-500' : 'bg-red-500'}"></div>
+        </div>
+    `;
+}
+
+// Bunte Badges für die Suche
+const TYPE_BADGES = { 'EQUITY': {label:'AKTIE',color:'bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200'}, 'ETF': {label:'ETF',color:'bg-purple-100 text-purple-800 dark:bg-purple-900 dark:text-purple-200'}, 'MUTUALFUND': {label:'FONDS',color:'bg-orange-100 text-orange-800 dark:bg-orange-900 dark:text-orange-200'}, 'CRYPTOCURRENCY': {label:'KRYPTO',color:'bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200'}, 'INDEX': {label:'INDEX',color:'bg-slate-100 text-slate-800 dark:bg-slate-700 dark:text-slate-200'} };
+
+export function renderSearchResults(results, container) {
+    if (results.length === 0) {
+        container.innerHTML = `<div class="p-4 text-sm text-slate-500 text-center">Keine Ergebnisse.</div>`;
+        container.classList.remove('hidden');
         return;
     }
-    if(emptyStateEl) emptyStateEl.classList.add('hidden');
-    if(summaryEl) summaryEl.classList.remove('hidden');
-    
-    // Only show spinner if we have no data yet
-    if(state.dashboardData.length === 0) gridEl.innerHTML = '<div class="col-span-full text-center text-slate-400 py-8 animate-pulse">Lade Kurse & Wechselkurse...</div>';
-
-    try {
-        let rateData = null;
-        try { rateData = await fetchChartData('EURUSD=X', '5d', '1d'); } catch (e) {}
-        const stockPromises = watchlist.map(async (item) => {
-            try {
-                // HIER: Nutze state.currentDashboardRange statt fix '1y'
-                // Intervall Logik:
-                let interval = '1d';
-                if(state.currentDashboardRange === '1d') interval = '5m';
-                else if(state.currentDashboardRange === '1W') interval = '15m'; // using 1W here as per your button, API expects 5d usually but we map in fetch logic or just pass it. Wait, fetchChartData uses what logic?
-                // Adjusting fetchChartData inputs:
-                // Yahoo API: range must be standard. My UI uses "1W", API uses "5d". Mapping needed.
-                let apiRange = state.currentDashboardRange;
-                if(apiRange === '1W') { apiRange = '5d'; interval = '15m'; }
-                if(apiRange === '1d') interval = '5m';
-                if(apiRange === '1mo') interval = '1d';
-
-                const rawData = await fetchChartData(item.symbol, apiRange, interval);
-                if (!rawData) return null;
-                const analysis = analyze(rawData);
-                analysis.qty = item.qty;
-                analysis.url = item.url;
-                return analysis;
-            } catch (e) { return null; }
-        });
-        const stockResults = await Promise.all(stockPromises);
-        if(rateData && rateData.indicators && rateData.indicators.quote[0].close) {
-            const closes = rateData.indicators.quote[0].close;
-            const currentRate = closes.filter(c => c).pop();
-            if(currentRate) state.eurUsdRate = currentRate;
-        }
-        state.dashboardData = stockResults.filter(r => r !== null);
-        renderDashboardGrid();
-    } catch (criticalError) { console.error("Dashboard Error:", criticalError); }
+    container.innerHTML = results.map(item => {
+        const badge = TYPE_BADGES[item.type] || { label: item.type, color: 'bg-slate-100 text-slate-600' };
+        return `
+        <div class="search-item px-4 py-3 hover:bg-slate-50 dark:hover:bg-slate-700/50 cursor-pointer border-b border-slate-100 dark:border-slate-700 last:border-0 transition-colors group" data-symbol="${item.symbol}">
+            <div class="flex justify-between items-center">
+                <div class="flex-grow min-w-0 mr-4">
+                    <div class="flex items-center gap-2 mb-0.5"><span class="font-bold text-slate-900 dark:text-white text-sm whitespace-nowrap">${item.symbol}</span><span class="text-[10px] font-bold px-1.5 py-0.5 rounded ${badge.color}">${badge.label}</span></div>
+                    <div class="text-xs text-slate-500 truncate" title="${item.name}">${item.name}</div>
+                </div>
+                <div class="text-xs font-mono bg-slate-100 dark:bg-slate-700 text-slate-500 px-2 py-1 rounded whitespace-nowrap group-hover:bg-white dark:group-hover:bg-slate-600 transition-colors">${item.exchange}</div>
+            </div>
+        </div>
+    `}).join('');
+    container.classList.remove('hidden');
 }
-
-function renderDashboardGrid() {
-    const gridEl = document.getElementById('dashboard-grid');
-    const totalEurEl = document.getElementById('total-balance-eur');
-    const totalUsdEl = document.getElementById('total-balance-usd');
-    const totalPosEl = document.getElementById('total-positions');
-    if (!totalEurEl) return;
-    let totalEUR = 0;
-    state.dashboardData.forEach(item => {
-        const rawValue = item.price * item.qty;
-        if (item.currency === 'EUR') totalEUR += rawValue;
-        else if (item.currency === 'USD') totalEUR += (rawValue / state.eurUsdRate);
-        else totalEUR += rawValue;
-    });
-    const totalUSD = totalEUR * state.eurUsdRate;
-    if(totalEurEl) totalEurEl.textContent = formatMoney(totalEUR, 'EUR');
-    if(totalUsdEl) totalUsdEl.textContent = formatMoney(totalUSD, 'USD');
-    if(totalPosEl) totalPosEl.textContent = state.dashboardData.length;
-    gridEl.innerHTML = state.dashboardData.map(data => createStockCardHTML(data, data.qty, data.url, totalEUR, state.eurUsdRate)).join('');
-    attachDashboardEvents();
-}
-
-function attachDashboardEvents() {
-    document.querySelectorAll('.delete-btn').forEach(btn => {
-        btn.addEventListener('click', (e) => {
-            e.stopPropagation();
-            if(confirm(`${e.currentTarget.dataset.symbol} entfernen?`)) { removeSymbol(e.currentTarget.dataset.symbol); loadDashboard(); }
-        });
-    });
-    document.querySelectorAll('.stock-card').forEach(card => {
-        card.addEventListener('click', (e) => {
-            if(e.target.tagName === 'INPUT' || e.target.tagName === 'A' || e.target.closest('a') || e.target.closest('.delete-btn')) return;
-            openModal(e.currentTarget.dataset.symbol);
-        });
-    });
-    document.querySelectorAll('.qty-input').forEach(input => {
-        input.addEventListener('change', (e) => {
-            const sym = e.target.dataset.symbol;
-            const newQty = parseFloat(e.target.value);
-            if(isNaN(newQty) || newQty < 0) return;
-            updateQuantity(sym, newQty);
-            const item = state.dashboardData.find(d => d.symbol === sym);
-            if(item) item.qty = newQty;
-            renderDashboardGrid();
-        });
-        input.addEventListener('click', (e) => e.stopPropagation());
-    });
-    document.querySelectorAll('.url-input').forEach(input => {
-        input.addEventListener('change', (e) => {
-            const sym = e.target.dataset.symbol;
-            const newUrl = e.target.value;
-            updateUrl(sym, newUrl);
-            const item = state.dashboardData.find(d => d.symbol === sym);
-            if(item) item.url = newUrl;
-            renderDashboardGrid();
-        });
-        input.addEventListener('click', (e) => e.stopPropagation());
-    });
-}
-
-// ... Rest of modal logic ...
-async function openModal(symbol) {
-    if(!modal) return;
-    state.currentSymbol = symbol;
-    state.currentRange = '1y'; 
-    modalFullname.textContent = 'Lade Daten...';
-    modalSymbol.textContent = symbol;
-    modalExchange.textContent = '...';
-    modalType.textContent = '...';
-    const rangeText = document.getElementById('dynamic-range-text');
-    if(rangeText) rangeText.textContent = 'Lade...';
-    if(modalVol) modalVol.textContent = '---';
-    if(modalTrend) modalTrend.textContent = '---';
-    modal.classList.remove('hidden');
-    updateRangeButtonsUI('1y');
-    await loadChartForModal(symbol, '1y');
-}
-function closeModal() { if(modal) modal.classList.add('hidden'); state.currentSymbol = null; }
-function updateRangeButtonsUI(activeRange) {
-    rangeBtns.forEach(btn => {
-        const range = btn.dataset.range;
-        btn.classList.remove('bg-white', 'dark:bg-slate-600', 'text-primary', 'dark:text-white', 'shadow-sm');
-        btn.classList.add('text-slate-600', 'dark:text-slate-400', 'hover:bg-white');
-        if(range === activeRange) {
-            btn.classList.remove('text-slate-600', 'dark:text-slate-400', 'hover:bg-white');
-            btn.classList.add('bg-white', 'dark:bg-slate-600', 'text-primary', 'dark:text-white', 'shadow-sm');
-        }
-    });
-}
-async function loadChartForModal(symbol, requestedRange) {
-    const canvasId = 'main-chart';
-    const canvas = document.getElementById(canvasId);
-    if(canvas) canvas.style.opacity = '0.5';
-    try {
-        let interval = '1d';
-        if (requestedRange === '1d') interval = '5m';
-        else if (requestedRange === '5d') interval = '15m';
-        else if (requestedRange === '1mo' || requestedRange === '3mo') interval = '1d';
-        else if (requestedRange === '5y' || requestedRange === '10y') interval = '1wk';
-        else if (requestedRange === 'max') interval = '1mo';
-        const rawData = await fetchChartData(symbol, requestedRange, interval);
-        if(rawData) {
-            const analysis = analyze(rawData);
-            renderChart(canvasId, rawData, requestedRange, analysis);
-            if(rawData.meta) {
-                if(modalExchange) modalExchange.textContent = rawData.meta.exchangeName || rawData.meta.exchangeTimezoneName || 'N/A';
-                const rawType = rawData.meta.instrumentType || 'EQUITY';
-                if(modalType) modalType.textContent = TYPE_TRANSLATIONS[rawType] || rawType;
-                const fullName = rawData.meta.longName || rawData.meta.shortName || symbol;
-                if(modalFullname) modalFullname.textContent = fullName; 
-                if(analysis) {
-                    if(modalVol) modalVol.textContent = analysis.volatility ? analysis.volatility.toFixed(1) + '%' : 'n/a';
-                    if(modalTrend) {
-                        const t = analysis.trend;
-                        let color = 'text-slate-900 dark:text-slate-200';
-                        let icon = '';
-                        if(t === 'bullish') { color = 'text-green-600'; icon = '▲ '; }
-                        if(t === 'bearish') { color = 'text-red-600'; icon = '▼ '; }
-                        modalTrend.innerHTML = `<span class="${color}">${icon}${t.toUpperCase()}</span>`;
-                    }
-                }
-            }
-        }
-    } catch (e) { console.error(e); if(modalFullname) modalFullname.textContent = "Fehler"; } 
-    finally { if(canvas) canvas.style.opacity = '1'; }
-}
-rangeBtns.forEach(btn => {
-    btn.addEventListener('click', () => {
-        if(!state.currentSymbol) return;
-        const range = btn.dataset.range;
-        state.currentRange = range;
-        updateRangeButtonsUI(range);
-        loadChartForModal(state.currentSymbol, range);
-    });
-});
-function initSearch() {
-    const input = document.getElementById('search-input');
-    const resultsContainer = document.getElementById('search-results');
-    const spinner = document.getElementById('search-spinner');
-    if(!input) return;
-    document.addEventListener('click', (e) => { if (!e.target.closest('#search-input') && !e.target.closest('#search-results')) resultsContainer.classList.add('hidden'); });
-    input.addEventListener('keydown', (e) => {
-        if (e.key === 'Enter') {
-            const val = input.value.trim().toUpperCase();
-            if (val.length > 0) {
-                if(addSymbol(val)) console.log(`Added: ${val}`);
-                input.value = '';
-                resultsContainer.classList.add('hidden');
-                loadDashboard();
-            }
-        }
-    });
-    input.addEventListener('input', (e) => {
-        const query = e.target.value.trim();
-        clearTimeout(state.searchDebounce);
-        if (query.length < 2) { resultsContainer.classList.add('hidden'); return; }
-        spinner.classList.remove('hidden');
-        state.searchDebounce = setTimeout(async () => {
-            const results = await searchSymbol(query);
-            spinner.classList.add('hidden');
-            renderSearchResults(results, resultsContainer);
-            document.querySelectorAll('.search-item').forEach(item => {
-                item.addEventListener('click', () => {
-                    addSymbol(item.dataset.symbol);
-                    input.value = '';
-                    resultsContainer.classList.add('hidden');
-                    loadDashboard();
-                });
-            });
-        }, 500);
-    });
-}
-document.addEventListener('DOMContentLoaded', async () => {
-    const currentTheme = initTheme();
-    const updateIcon = (mode) => { const icon = themeBtn?.querySelector('i'); if(icon) { if (mode === 'dark') { icon.classList.remove('fa-moon'); icon.classList.add('fa-sun'); } else { icon.classList.remove('fa-sun'); icon.classList.add('fa-moon'); } } };
-    updateIcon(currentTheme);
-    if(themeBtn) themeBtn.addEventListener('click', () => updateIcon(toggleTheme()));
-    renderAppSkeleton(rootEl);
-    closeModalBtns.forEach(btn => btn?.addEventListener('click', closeModal));
-    if(modal) modal.addEventListener('click', (e) => { if(e.target === modal) closeModal(); });
-    initSearch();
-    loadDashboard();
-    // (Restliche Button-Listener für Import/Export bleiben gleich wie vorher)
-    const exportBtn = document.getElementById('export-btn');
-    const importBtn = document.getElementById('import-btn');
-    const importInput = document.getElementById('import-input');
-    const copyBtn = document.getElementById('copy-list-btn');
-    const copyUrlsBtn = document.getElementById('copy-urls-btn');
-    if(copyBtn) {
-        copyBtn.addEventListener('click', () => {
-            if(!state.dashboardData || state.dashboardData.length === 0) { alert("Keine Daten."); return; }
-            let totalValueEUR = 0;
-            const items = state.dashboardData.map(item => {
-                let valEur = item.price * item.qty;
-                if(item.currency === 'USD') valEur /= state.eurUsdRate;
-                totalValueEUR += valEur;
-                return { ...item, valEur };
-            });
-            if(totalValueEUR === 0) totalValueEUR = 1;
-            items.forEach(i => i.percent = (i.valEur / totalValueEUR) * 100);
-            items.sort((a, b) => b.percent - a.percent);
-            let text = "DEPOT-ZUSAMMENSETZUNG\n\n";
-            items.forEach(i => {
-                const safeName = i.name || i.symbol || "Unbekannt";
-                const safeType = i.type || 'EQUITY';
-                const typeName = TYPE_TRANSLATIONS[safeType] || safeType;
-                text += `[${i.percent.toFixed(1).replace('.',',')}%] ${safeName} (${i.symbol}) – ${typeName}\n`;
-            });
-            navigator.clipboard.writeText(text).then(() => {
-                const originalText = copyBtn.innerHTML;
-                copyBtn.innerHTML = '<i class="fa-solid fa-check"></i> Kopiert!';
-                setTimeout(() => copyBtn.innerHTML = originalText, 2000);
-            }).catch(err => alert('Fehler beim Kopieren.'));
-        });
-    }
-    if(copyUrlsBtn) {
-        copyUrlsBtn.addEventListener('click', () => {
-            if(!state.dashboardData || state.dashboardData.length === 0) { alert("Keine Daten."); return; }
-            let text = "WICHTIGE LINKS\n\n";
-            const items = [...state.dashboardData].sort((a,b) => a.symbol.localeCompare(b.symbol));
-            let count = 0;
-            items.forEach(i => {
-                if(i.url && i.url.trim() !== '') {
-                    const safeName = i.name || i.symbol;
-                    text += `${safeName} (${i.symbol}):\n${i.url}\n\n`;
-                    count++;
-                }
-            });
-            if(count === 0) { alert("Keine URLs hinterlegt."); return; }
-            navigator.clipboard.writeText(text).then(() => {
-                const originalText = copyUrlsBtn.innerHTML;
-                copyUrlsBtn.innerHTML = '<i class="fa-solid fa-check"></i> Kopiert!';
-                setTimeout(() => copyUrlsBtn.innerHTML = originalText, 2000);
-            });
-        });
-    }
-    if(exportBtn) {
-        exportBtn.addEventListener('click', () => {
-            const data = localStorage.getItem('alphaview_portfolio');
-            if(!data || data === '[]') { alert('Dein Depot ist leer.'); return; }
-            const blob = new Blob([data], {type: 'application/json'});
-            const url = URL.createObjectURL(blob);
-            const a = document.createElement('a');
-            a.href = url;
-            const dateStr = new Date().toISOString().slice(0,10);
-            a.download = `alphaview_depot_backup_${dateStr}.json`;
-            document.body.appendChild(a);
-            a.click();
-            document.body.removeChild(a);
-            URL.revokeObjectURL(url);
-        });
-    }
-    if(importBtn && importInput) {
-        importBtn.addEventListener('click', () => {
-            if(localStorage.getItem('alphaview_portfolio') && localStorage.getItem('alphaview_portfolio') !== '[]') {
-                if(!confirm('Achtung: Dies überschreibt dein aktuelles Depot! Fortfahren?')) return;
-            }
-            importInput.click();
-        });
-        importInput.addEventListener('change', (e) => {
-            const file = e.target.files[0];
-            if(!file) return;
-            const reader = new FileReader();
-            reader.onload = (event) => {
-                try {
-                    const json = JSON.parse(event.target.result);
-                    if(Array.isArray(json)) {
-                        localStorage.setItem('alphaview_portfolio', JSON.stringify(json));
-                        alert('Depot erfolgreich importiert!');
-                        location.reload();
-                    } else { alert('Ungültiges Dateiformat.'); }
-                } catch(err) { alert('Fehler beim Lesen der Datei.'); }
-            };
-            reader.readAsText(file);
-        });
-    }
-});
