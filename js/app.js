@@ -1,6 +1,7 @@
 /**
  * App Module
- * Updated: Populates Technical Indicators in Modal
+ * Main Controller: Coordinates Logic, UI, and Events.
+ * Updated: Passes SMA Analysis Data to Charts.js & Updates Trend Badge
  */
 import { initTheme, toggleTheme } from './theme.js';
 import { fetchChartData, searchSymbol } from './api.js';
@@ -17,14 +18,11 @@ const modalFullname = document.getElementById('modal-fullname');
 const modalSymbol = document.getElementById('modal-symbol');
 const modalExchange = document.getElementById('modal-exchange');
 const modalType = document.getElementById('modal-type');
+const modalTrend = document.getElementById('modal-trend');
+const modalVol = document.getElementById('modal-vol');
 const closeModalBtns = [document.getElementById('close-modal'), document.getElementById('close-modal-btn')];
 const rangeBtns = document.querySelectorAll('.chart-range-btn');
 const TYPE_TRANSLATIONS = { 'EQUITY': 'AKTIE', 'ETF': 'ETF', 'MUTUALFUND': 'FONDS', 'INDEX': 'INDEX', 'CRYPTOCURRENCY': 'KRYPTO', 'CURRENCY': 'DEVISEN', 'FUTURE': 'FUTURE', 'OPTION': 'OPTION' };
-
-// IDs für die neuen Felder
-const modalVol = document.getElementById('modal-vol');
-const modalSMA50 = document.getElementById('modal-sma50');
-const modalSMA200 = document.getElementById('modal-sma200');
 
 async function loadDashboard() {
     const watchlist = getWatchlist();
@@ -125,10 +123,9 @@ async function openModal(symbol) {
     const rangeText = document.getElementById('dynamic-range-text');
     if(rangeText) rangeText.textContent = 'Lade...';
     
-    // Reset Technicals
+    // Reset Metrics
     if(modalVol) modalVol.textContent = '---';
-    if(modalSMA50) modalSMA50.textContent = '---';
-    if(modalSMA200) modalSMA200.textContent = '---';
+    if(modalTrend) modalTrend.textContent = '---';
 
     modal.classList.remove('hidden');
     updateRangeButtonsUI('1y');
@@ -163,10 +160,11 @@ async function loadChartForModal(symbol, requestedRange) {
 
         const rawData = await fetchChartData(symbol, requestedRange, interval);
         if(rawData) {
-            renderChart(canvasId, rawData, requestedRange);
-            
-            // ANALYZE FOR METRICS (VOL, SMA)
+            // Analyse first to get SMAs
             const analysis = analyze(rawData);
+            
+            // Render with analysis data
+            renderChart(canvasId, rawData, requestedRange, analysis);
             
             if(rawData.meta) {
                 if(modalExchange) modalExchange.textContent = rawData.meta.exchangeName || rawData.meta.exchangeTimezoneName || 'N/A';
@@ -175,11 +173,17 @@ async function loadChartForModal(symbol, requestedRange) {
                 const fullName = rawData.meta.longName || rawData.meta.shortName || symbol;
                 if(modalFullname) modalFullname.textContent = fullName; 
                 
-                // --- UPDATE TECHNICALS ---
-                if (analysis) {
-                    if (modalVol) modalVol.textContent = analysis.volatility ? analysis.volatility.toFixed(1) + '%' : 'n/a';
-                    if (modalSMA50) modalSMA50.textContent = analysis.sma50 ? formatMoney(analysis.sma50, rawData.meta.currency) : 'n/a';
-                    if (modalSMA200) modalSMA200.textContent = analysis.sma200 ? formatMoney(analysis.sma200, rawData.meta.currency) : 'n/a';
+                // Update Trend & Vol
+                if(analysis) {
+                    if(modalVol) modalVol.textContent = analysis.volatility ? analysis.volatility.toFixed(1) + '%' : 'n/a';
+                    if(modalTrend) {
+                        const t = analysis.trend;
+                        let color = 'text-slate-900 dark:text-slate-200';
+                        let icon = '';
+                        if(t === 'bullish') { color = 'text-green-600'; icon = '▲ '; }
+                        if(t === 'bearish') { color = 'text-red-600'; icon = '▼ '; }
+                        modalTrend.innerHTML = `<span class="${color}">${icon}${t.toUpperCase()}</span>`;
+                    }
                 }
             }
         }

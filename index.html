@@ -1,6 +1,6 @@
 <!--
  * AlphaView Entry Point
- * Updates: Added Technical Indicators Row in Modal
+ * Layout Update: Full Names in Modal Header & Trend Badge
 -->
 <!DOCTYPE html>
 <html lang="de" class="antialiased">
@@ -61,27 +61,33 @@
                                 
                                 <!-- ROW 1: Basic Info -->
                                 <div class="flex flex-wrap gap-2 mt-3 text-xs font-mono text-slate-500 dark:text-slate-400 items-center">
-                                    <span class="bg-slate-100 dark:bg-slate-800 px-2 py-1 rounded border border-slate-200 dark:border-slate-600">SYM: <strong id="modal-symbol" class="text-slate-900 dark:text-slate-200">---</strong></span>
-                                    <span class="bg-slate-100 dark:bg-slate-800 px-2 py-1 rounded border border-slate-200 dark:border-slate-600">BÖRSE: <strong id="modal-exchange" class="text-slate-900 dark:text-slate-200">---</strong></span>
-                                    <span class="bg-slate-100 dark:bg-slate-800 px-2 py-1 rounded border border-slate-200 dark:border-slate-600">TYP: <strong id="modal-type" class="text-slate-900 dark:text-slate-200">---</strong></span>
-                                    <span class="bg-slate-100 dark:bg-slate-800 px-2 py-1 rounded border border-slate-200 dark:border-slate-600">ZEIT: <strong id="dynamic-range-text" class="text-slate-900 dark:text-slate-200">...</strong></span>
-                                    <span class="bg-slate-100 dark:bg-slate-800 px-2 py-1 rounded border border-slate-200 dark:border-slate-600">PERF: <strong id="chart-performance">...</strong></span>
+                                    <span class="bg-slate-100 dark:bg-slate-800 px-2 py-1 rounded border border-slate-200 dark:border-slate-600">
+                                        SYMBOL: <strong id="modal-symbol" class="text-slate-900 dark:text-slate-200">---</strong>
+                                    </span>
+                                    <span class="bg-slate-100 dark:bg-slate-800 px-2 py-1 rounded border border-slate-200 dark:border-slate-600">
+                                        BÖRSE: <strong id="modal-exchange" class="text-slate-900 dark:text-slate-200">---</strong>
+                                    </span>
+                                    <span class="bg-slate-100 dark:bg-slate-800 px-2 py-1 rounded border border-slate-200 dark:border-slate-600">
+                                        TYP: <strong id="modal-type" class="text-slate-900 dark:text-slate-200">---</strong>
+                                    </span>
+                                    <span class="bg-slate-100 dark:bg-slate-800 px-2 py-1 rounded border border-slate-200 dark:border-slate-600">
+                                        ZEITRAUM: <strong id="dynamic-range-text" class="text-slate-900 dark:text-slate-200">...</strong>
+                                    </span>
                                 </div>
 
-                                <!-- ROW 2: Technical Indicators (NEW) -->
+                                <!-- ROW 2: Performance & Signals -->
                                 <div class="flex flex-wrap gap-2 mt-2 text-xs font-mono text-slate-500 dark:text-slate-400 items-center">
-                                    <span class="bg-slate-100 dark:bg-slate-800 px-2 py-1 rounded border border-slate-200 dark:border-slate-600" title="Annualisierte Volatilität">
-                                        VOL: <strong id="modal-vol" class="text-slate-900 dark:text-slate-200">---</strong>
+                                    <span class="bg-slate-100 dark:bg-slate-800 px-2 py-1 rounded border border-slate-200 dark:border-slate-600">
+                                        PERFORMANCE: <strong id="chart-performance">...</strong>
                                     </span>
-                                    <span class="bg-slate-100 dark:bg-slate-800 px-2 py-1 rounded border border-slate-200 dark:border-slate-600" title="Gleitender Durchschnitt 50 Tage">
-                                        SMA50: <strong id="modal-sma50" class="text-slate-900 dark:text-slate-200">---</strong>
+                                    <span class="bg-slate-100 dark:bg-slate-800 px-2 py-1 rounded border border-slate-200 dark:border-slate-600">
+                                        VOLATILITÄT: <strong id="modal-vol" class="text-slate-900 dark:text-slate-200">---</strong>
                                     </span>
-                                    <span class="bg-slate-100 dark:bg-slate-800 px-2 py-1 rounded border border-slate-200 dark:border-slate-600" title="Gleitender Durchschnitt 200 Tage">
-                                        SMA200: <strong id="modal-sma200" class="text-slate-900 dark:text-slate-200">---</strong>
+                                    <span class="bg-slate-100 dark:bg-slate-800 px-2 py-1 rounded border border-slate-200 dark:border-slate-600">
+                                        TREND: <strong id="modal-trend" class="text-slate-900 dark:text-slate-200">---</strong>
                                     </span>
                                 </div>
                             </div>
-
                             <div class="w-full overflow-x-auto no-scrollbar pb-1">
                                 <div class="flex bg-slate-100 dark:bg-slate-800 p-1 rounded-lg gap-1 min-w-max" id="chart-controls">
                                     <button data-range="1d" class="chart-range-btn px-3 py-1.5 text-xs font-bold rounded-md text-slate-600 dark:text-slate-400 hover:bg-white dark:hover:bg-slate-700 transition-all">1T</button>
@@ -116,6 +122,6 @@
     </footer>
 
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-    <script type="module" src="js/app.js?v=40"></script>
+    <script type="module" src="js/app.js?v=Final42"></script>
 </body>
 </html>

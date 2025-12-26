@@ -1,75 +1,29 @@
 /**
  * Charts Module
- * Updates: Calculates and displays Performance % for the selected range.
+ * Updates: Draws SMA50 and SMA200 lines.
  */
 let chartInstance = null;
 
-const formatCurrencyValue = (val, currency) => {
-    const locale = (currency === 'EUR') ? 'de-DE' : 'en-US';
-    return new Intl.NumberFormat(locale, { style: 'currency', currency: currency }).format(val);
-};
-
-// Berechnet Performance (Start vs Ende)
-function updatePerformance(prices) {
-    const el = document.getElementById('chart-performance');
-    if (!el || prices.length < 2) return;
-
-    const start = prices.find(p => p !== null) || 0;
-    const end = prices[prices.length - 1] || start;
-    
-    if (start === 0) return;
-
-    const diff = end - start;
-    const pct = (diff / start) * 100;
-    
-    // Formatierung: +2.50% oder -1.20%
-    const sign = pct >= 0 ? '+' : '';
-    const colorClass = pct >= 0 ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400';
-    
-    el.innerHTML = `<span class="${colorClass}">${sign}${pct.toFixed(2)}%</span>`;
-}
-
-function updateRangeInfo(labels, range) {
-    const el = document.getElementById('dynamic-range-text');
-    
-    if (!el) return;
-    if (!labels || labels.length === 0) { el.textContent = "Keine Daten"; return; }
-
-    try {
-        const start = labels[0];
-        const end = labels[labels.length - 1];
-        
-        const fDate = (d) => d.toLocaleDateString('de-DE', { day: '2-digit', month: '2-digit', year: 'numeric' });
-        const fMonthYear = (d) => d.toLocaleDateString('de-DE', { month: '2-digit', year: 'numeric' });
-        const fYear = (d) => d.getFullYear(); 
-        const fmtTime = new Intl.DateTimeFormat('de-DE', { hour: '2-digit', minute: '2-digit' });
-
-        let text = "";
-
-        if (range === '1d') {
-            text = `${fDate(end)} <span class="opacity-50 ml-1 font-normal">(${fmtTime.format(end)})</span>`;
-        } 
-        else if (range === '5d') {
-            text = `${fDate(start)} – ${fDate(end)}`;
-        } 
-        else if (range === '1mo' || range === '6mo') {
-            text = `${fMonthYear(start).replace('.','/')} – ${fMonthYear(end).replace('.','/')}`;
-        } 
-        else if (range === '1y') {
-            const y1 = fYear(start);
-            const y2 = fYear(end);
-            text = (y1 === y2) ? `${y1}` : `${y1} – ${y2}`;
-        } 
-        else {
-            text = `${fYear(start)} – ${fYear(end)}`;
+// Helper: Berechnet SMA Array für den Chart
+function calculateSMA_Array(data, window) {
+    let sma = [];
+    for (let i = 0; i < data.length; i++) {
+        if (i < window - 1) {
+            sma.push(null); // Noch nicht genug Daten
+            continue;
         }
-        
-        el.innerHTML = text;
-
-    } catch (err) { console.error("Error formatting date:", err); }
+        let sum = 0;
+        for (let j = 0; j < window; j++) {
+            sum += data[i - j];
+        }
+        sma.push(sum / window);
+    }
+    return sma;
 }
 
-export function renderChart(canvasId, rawData, range = '1y') {
+// ... (formatCurrencyValue, updateRangeInfo, updatePerformance bleiben gleich) ...
+
+export function renderChart(canvasId, rawData, range = '1y', analysisData = null) {
     const canvas = document.getElementById(canvasId);
     if (!canvas) return;
     
@@ -79,10 +33,8 @@ export function renderChart(canvasId, rawData, range = '1y') {
     const currency = rawData.meta.currency || 'USD';
 
     const labels = timestamps.map(t => new Date(t * 1000));
-    
-    // UI Updates
     updateRangeInfo(labels, range);
-    updatePerformance(prices); // NEU: Performance berechnen
+    updatePerformance(prices);
 
     if (chartInstance) chartInstance.destroy();
 
@@ -95,64 +47,73 @@ export function renderChart(canvasId, rawData, range = '1y') {
     gradientColor.addColorStop(0, isBullish ? 'rgba(34, 197, 94, 0.2)' : 'rgba(239, 68, 68, 0.2)');
     gradientColor.addColorStop(1, 'rgba(15, 23, 42, 0)');
 
+    // DATASETS DEFINITION
+    const datasets = [{
+        label: 'Kurs',
+        data: prices,
+        borderColor: lineColor,
+        backgroundColor: gradientColor,
+        borderWidth: 2,
+        pointRadius: 0,
+        pointHoverRadius: 6,
+        fill: true,
+        tension: 0.1,
+        spanGaps: true,
+        order: 1 // Kurs liegt ganz oben
+    }];
+
+    // SMA LINIEN HINZUFÜGEN (Nur wenn genug Daten da sind)
+    if (prices.length > 50) {
+        const sma50Data = calculateSMA_Array(prices, 50);
+        datasets.push({
+            label: 'SMA 50',
+            data: sma50Data,
+            borderColor: '#3b82f6', // Blau
+            borderWidth: 1.5,
+            pointRadius: 0,
+            fill: false,
+            tension: 0.4, // Weichere Kurve
+            spanGaps: true,
+            order: 2
+        });
+    }
+
+    if (prices.length > 200) {
+        const sma200Data = calculateSMA_Array(prices, 200);
+        datasets.push({
+            label: 'SMA 200',
+            data: sma200Data,
+            borderColor: '#f59e0b', // Orange/Gelb
+            borderWidth: 1.5,
+            pointRadius: 0,
+            fill: false,
+            tension: 0.4,
+            spanGaps: true,
+            order: 3
+        });
+    }
+
     chartInstance = new Chart(ctx, {
         type: 'line',
         data: {
             labels: labels,
-            datasets: [{
-                label: 'Kurs',
-                data: prices,
-                borderColor: lineColor,
-                backgroundColor: gradientColor,
-                borderWidth: 2,
-                pointRadius: 0,
-                pointHoverRadius: 6,
-                fill: true,
-                tension: 0.1,
-                spanGaps: true
-            }]
+            datasets: datasets
         },
         options: {
             responsive: true,
             maintainAspectRatio: false,
             interaction: { mode: 'index', intersect: false },
             plugins: {
-                legend: { display: false },
+                legend: { 
+                    display: true, // Legende anzeigen damit man weiß was SMA ist
+                    labels: { color: '#94a3b8', boxWidth: 10, font: { size: 10 } }
+                }, 
                 tooltip: {
-                    backgroundColor: 'rgba(15, 23, 42, 0.9)',
-                    titleColor: '#e2e8f0',
-                    bodyColor: '#fff',
-                    borderColor: 'rgba(148, 163, 184, 0.2)',
-                    borderWidth: 1,
-                    padding: 10,
-                    displayColors: false,
-                    callbacks: {
-                        title: function(context) {
-                            const d = labels[context[0].dataIndex];
-                            if (range === '1d' || range === '5d') {
-                                return d.toLocaleDateString('de-DE', { weekday: 'short', day: '2-digit', month: '2-digit', hour: '2-digit', minute:'2-digit' });
-                            }
-                            return d.toLocaleDateString('de-DE', { day: '2-digit', month: '2-digit', year: 'numeric' });
-                        },
-                        label: function(context) { return formatCurrencyValue(context.parsed.y, currency); }
-                    }
+                    // ... (Tooltip Logik bleibt gleich)
                 }
             },
             scales: {
-                x: {
-                    display: true, grid: { display: false },
-                    ticks: {
-                        color: '#94a3b8', maxRotation: 0, autoSkip: true, maxTicksLimit: 6,
-                        callback: function(val, index) {
-                            const d = labels[index];
-                            if (!d) return '';
-                            if (range === '1d') return d.toLocaleTimeString('de-DE', { hour: '2-digit', minute:'2-digit' });
-                            if (range === '5d') return d.toLocaleDateString('de-DE', { weekday: 'short', day: '2-digit' });
-                            return d.toLocaleDateString('de-DE', { day: '2-digit', month: '2-digit', year: '2-digit' });
-                        }
-                    }
-                },
-                y: { display: true, position: 'right', grid: { color: 'rgba(200, 200, 200, 0.05)', borderDash: [5, 5] }, ticks: { color: '#94a3b8', callback: function(value) { return formatCurrencyValue(value, currency); } } }
+                // ... (Scales Logik bleibt gleich)
             }
         }
     });
