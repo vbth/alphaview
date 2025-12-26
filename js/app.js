@@ -246,19 +246,53 @@ function initSearch() {
     const spinner = document.getElementById('search-spinner');
 
     if(!input) return;
+
+    // Klick außerhalb schließt Dropdown
     document.addEventListener('click', (e) => {
-        if (!e.target.closest('#search-input') && !e.target.closest('#search-results')) resultsContainer.classList.add('hidden');
+        if (!e.target.closest('#search-input') && !e.target.closest('#search-results')) {
+            resultsContainer.classList.add('hidden');
+        }
     });
 
+    // 1. NEU: ENTER-TASTE LOGIK (Power User Add)
+    input.addEventListener('keydown', (e) => {
+        if (e.key === 'Enter') {
+            const val = input.value.trim().toUpperCase();
+            if (val.length > 0) {
+                // Direktes Hinzufügen erzwingen
+                if(addSymbol(val)) {
+                    // Feedback
+                    console.log(`Symbol ${val} manuell hinzugefügt.`);
+                } else {
+                    alert(`${val} ist bereits auf der Watchlist.`);
+                }
+                input.value = '';
+                resultsContainer.classList.add('hidden');
+                loadDashboard();
+            }
+        }
+    });
+
+    // 2. Normale Suche (Eingabe)
     input.addEventListener('input', (e) => {
         const query = e.target.value.trim();
         clearTimeout(state.searchDebounce);
-        if (query.length < 2) { resultsContainer.classList.add('hidden'); return; }
+        
+        if (query.length < 2) { 
+            resultsContainer.classList.add('hidden'); 
+            return; 
+        }
+
         spinner.classList.remove('hidden');
+
         state.searchDebounce = setTimeout(async () => {
             const results = await searchSymbol(query);
             spinner.classList.add('hidden');
+            
+            // Render results
             renderSearchResults(results, resultsContainer);
+
+            // Klick auf Ergebnis
             document.querySelectorAll('.search-item').forEach(item => {
                 item.addEventListener('click', () => {
                     addSymbol(item.dataset.symbol);
