@@ -82,14 +82,16 @@
                             
                             <!-- MODAL CONTROLS (UNIFIED) -->
                             <div class="w-full overflow-x-auto no-scrollbar pb-1">
-                                <div class="flex bg-slate-100 dark:bg-slate-800 p-1 rounded-lg gap-1 min-w-max" id="chart-controls">
-                                    <button data-range="1d" class="chart-range-btn px-4 py-1.5 text-xs font-bold rounded-md text-slate-600 dark:text-slate-400 hover:bg-white dark:hover:bg-slate-700 transition-all">1T</button>
-                                    <button data-range="1W" class="chart-range-btn px-4 py-1.5 text-xs font-bold rounded-md text-slate-600 dark:text-slate-400 hover:bg-white dark:hover:bg-slate-700 transition-all">1W</button>
-                                    <button data-range="1mo" class="chart-range-btn px-4 py-1.5 text-xs font-bold rounded-md text-slate-600 dark:text-slate-400 hover:bg-white dark:hover:bg-slate-700 transition-all">1M</button>
-                                    <button data-range="6mo" class="chart-range-btn px-4 py-1.5 text-xs font-bold rounded-md text-slate-600 dark:text-slate-400 hover:bg-white dark:hover:bg-slate-700 transition-all">6M</button>
-                                    <button data-range="1y" class="chart-range-btn px-4 py-1.5 text-xs font-bold rounded-md bg-white dark:bg-slate-600 text-primary dark:text-white shadow-sm transition-all">1J</button>
-                                    <button data-range="5y" class="chart-range-btn px-4 py-1.5 text-xs font-bold rounded-md text-slate-600 dark:text-slate-400 hover:bg-white dark:hover:bg-slate-700 transition-all">5J</button>
-                                    <button data-range="max" class="chart-range-btn px-4 py-1.5 text-xs font-bold rounded-md text-slate-600 dark:text-slate-400 hover:bg-white dark:hover:bg-slate-700 transition-all">MAX</button>
+                                <!-- Design-Update: Gleiche Klassen wie Dashboard (bg-white dark:bg-dark-surface border shadow-sm) -->
+                                <div class="flex bg-white dark:bg-dark-surface p-1 rounded-lg border border-slate-200 dark:border-slate-700 shadow-sm gap-1 min-w-max" id="chart-controls">
+                                    <button data-range="1d" class="chart-range-btn px-4 py-1.5 text-xs font-bold rounded-md text-slate-500 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-700 transition-all">1T</button>
+                                    <button data-range="1W" class="chart-range-btn px-4 py-1.5 text-xs font-bold rounded-md text-slate-500 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-700 transition-all">1W</button>
+                                    <button data-range="1mo" class="chart-range-btn px-4 py-1.5 text-xs font-bold rounded-md text-slate-500 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-700 transition-all">1M</button>
+                                    <button data-range="6mo" class="chart-range-btn px-4 py-1.5 text-xs font-bold rounded-md text-slate-500 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-700 transition-all">6M</button>
+                                    <!-- 1J ist hier aktiv -->
+                                    <button data-range="1y" class="chart-range-btn px-4 py-1.5 text-xs font-bold rounded-md bg-slate-100 dark:bg-slate-600 text-primary dark:text-white transition-all">1J</button>
+                                    <button data-range="5y" class="chart-range-btn px-4 py-1.5 text-xs font-bold rounded-md text-slate-500 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-700 transition-all">5J</button>
+                                    <button data-range="max" class="chart-range-btn px-4 py-1.5 text-xs font-bold rounded-md text-slate-500 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-700 transition-all">MAX</button>
                                 </div>
                             </div>
                         </div>
@@ -119,6 +121,6 @@
     </footer>
 
     <script src="https://cdn.jsdelivr.net/npm/lightweight-charts@4.2.0/dist/lightweight-charts.standalone.production.js"></script>
-    <script type="module" src="js/app.js?v=67"></script>
+    <script type="module" src="js/app.js?v=69"></script>
 </body>
 </html>

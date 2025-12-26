@@ -167,11 +167,13 @@ function updateRangeButtonsUI(activeRange) {
     rangeBtns.forEach(btn => {
         const range = btn.dataset.range;
         if(range === activeRange) {
-            btn.classList.remove('text-slate-600', 'dark:text-slate-400', 'hover:bg-white');
-            btn.classList.add('bg-white', 'dark:bg-slate-600', 'text-primary', 'dark:text-white', 'shadow-sm');
+            // Aktiv: Slate-100 BG, Primary Text
+            btn.classList.remove('text-slate-500', 'dark:text-slate-400', 'hover:bg-slate-50');
+            btn.classList.add('bg-slate-100', 'dark:bg-slate-600', 'text-primary', 'dark:text-white');
         } else {
-            btn.classList.add('text-slate-600', 'dark:text-slate-400', 'hover:bg-white');
-            btn.classList.remove('bg-white', 'dark:bg-slate-600', 'text-primary', 'dark:text-white', 'shadow-sm');
+            // Inaktiv: Slate-500 Text, kein BG
+            btn.classList.add('text-slate-500', 'dark:text-slate-400', 'hover:bg-slate-50', 'dark:hover:bg-slate-700');
+            btn.classList.remove('bg-slate-100', 'dark:bg-slate-600', 'text-primary', 'dark:text-white');
         }
     });
 }

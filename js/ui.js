@@ -1,6 +1,6 @@
 /**
  * UI Module
- * Updates: "Volatilität" casing fixed.
+ * Updates: Swapped Value and Share position in Card.
  */
 export const formatMoney = (val, currency) => {
     const locale = (currency === 'EUR') ? 'de-DE' : 'en-US';
@@ -39,6 +39,7 @@ export function renderAppSkeleton(container) {
         </div>
 
         <div class="mb-8 flex justify-center overflow-x-auto no-scrollbar py-2">
+            <!-- DASHBOARD BUTTONS STYLE -->
             <div class="flex bg-white dark:bg-dark-surface p-1 rounded-lg border border-slate-200 dark:border-slate-700 shadow-sm" id="dashboard-range-controls">
                 <button data-range="1d" class="dash-range-btn px-4 py-1.5 text-xs font-bold rounded-md bg-slate-100 dark:bg-slate-600 text-primary dark:text-white transition-all">1T</button>
                 <button data-range="1W" class="dash-range-btn px-4 py-1.5 text-xs font-bold rounded-md text-slate-500 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-700 transition-all">1W</button>
@@ -83,17 +84,25 @@ export function createStockCardHTML(data, qty, url, totalPortfolioValueEUR, eurU
                         <div class="text-sm font-medium font-mono ${colorClass}">${formatPercent(data.changePercent)}</div>
                     </div>
                 </div>
+
+                <!-- INFO BOX -->
                 <div class="bg-slate-50 dark:bg-slate-800/50 rounded-lg p-3 mb-4 border border-slate-100 dark:border-slate-700" onclick="event.stopPropagation()">
+                    
+                    <!-- 1. Zeile: HIER GETAUSCHT -->
                     <div class="flex justify-between items-center border-b border-slate-200 dark:border-slate-700 pb-2 mb-2">
-                        <div class="flex items-center gap-2">
-                            <i class="fa-solid fa-coins text-slate-400 text-xs"></i>
-                            <div class="font-mono font-bold text-slate-900 dark:text-white">${formatMoney(positionValueNative, data.currency)}</div>
-                        </div>
+                        <!-- Links: Anteil (Pie) -->
                         <div class="flex items-center gap-2">
                             <i class="fa-solid fa-chart-pie text-slate-400 text-xs"></i>
                             <div class="text-xs font-mono text-slate-500 dark:text-slate-300">${formatPercent(weightPercent)}</div>
                         </div>
+                        <!-- Rechts: Wert (Coins) -->
+                        <div class="flex items-center gap-2">
+                            <div class="font-mono font-bold text-slate-900 dark:text-white">${formatMoney(positionValueNative, data.currency)}</div>
+                            <i class="fa-solid fa-coins text-slate-400 text-xs"></i>
+                        </div>
                     </div>
+
+                    <!-- 2. Zeile: Menge -->
                     <div class="flex justify-between items-center mb-2">
                         <div class="flex items-center gap-2">
                             <i class="fa-solid fa-layer-group text-slate-400 text-xs"></i>
@@ -101,17 +110,19 @@ export function createStockCardHTML(data, qty, url, totalPortfolioValueEUR, eurU
                         </div>
                         <input type="number" min="0" step="any" class="qty-input w-24 text-right text-sm bg-white dark:bg-slate-700 border border-slate-200 dark:border-slate-600 rounded px-2 py-1 focus:ring-2 focus:ring-primary outline-none" value="${qty}" data-symbol="${data.symbol}" placeholder="0">
                     </div>
+
+                    <!-- 3. Zeile: URL -->
                     <div class="flex items-center gap-2 pt-1">
                         <i class="fa-solid fa-link text-slate-400 text-xs"></i>
                         <input type="text" class="url-input w-full text-xs bg-transparent border-none focus:ring-0 text-slate-600 dark:text-slate-400 placeholder-slate-400" value="${safeUrl}" data-symbol="${data.symbol}" placeholder="Info-Link...">
                         ${safeUrl ? `<a href="${safeUrl}" target="_blank" class="text-primary hover:text-blue-600" title="Öffnen"><i class="fa-solid fa-external-link-alt"></i></a>` : ''}
                     </div>
                 </div>
+
                 <div class="flex items-center justify-between text-xs text-slate-500 dark:text-slate-400 mt-4 border-t border-slate-50 dark:border-slate-800 pt-3">
                     <div class="flex items-center gap-2">
                         <div class="flex items-center gap-1"><i class="fa-solid ${trendIcon}"></i> ${data.trend}</div>
                         <span class="text-slate-300 dark:text-slate-600">•</span>
-                        <!-- UPDATE: Schreibweise -->
                         <div>Volatilität ${data.volatility.toFixed(1)}%</div>
                     </div>
                     <button class="delete-btn text-slate-400 hover:text-red-500 transition-colors flex items-center gap-1.5 px-2 py-1 hover:bg-red-50 dark:hover:bg-red-900/20 rounded" data-symbol="${data.symbol}" title="Entfernen">
@@ -119,6 +130,7 @@ export function createStockCardHTML(data, qty, url, totalPortfolioValueEUR, eurU
                     </button>
                 </div>
             </div>
+            
             <div class="h-1 w-full ${isUp ? 'bg-green-500' : 'bg-red-500'}"></div>
         </div>
     `;
