@@ -1,6 +1,6 @@
 <!--
  * AlphaView Entry Point
- * Added: "Copy List" Button in Footer
+ * Update: CSS to hide number input spinners
 -->
 <!DOCTYPE html>
 <html lang="de" class="antialiased">
@@ -23,6 +23,17 @@
         body { transition: background-color 0.3s ease, color 0.3s ease; }
         .no-scrollbar::-webkit-scrollbar { display: none; }
         .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+
+        /* HIDE NUMBER INPUT SPINNERS (Chrome, Safari, Edge, Opera) */
+        input::-webkit-outer-spin-button,
+        input::-webkit-inner-spin-button {
+            -webkit-appearance: none;
+            margin: 0;
+        }
+        /* HIDE NUMBER INPUT SPINNERS (Firefox) */
+        input[type=number] {
+            -moz-appearance: textfield;
+        }
     </style>
 </head>
 <body class="bg-slate-50 text-slate-900 dark:bg-dark-bg dark:text-slate-100 flex flex-col min-h-screen">
@@ -58,16 +69,34 @@
                         <div class="flex flex-col gap-4 mb-4 pr-8">
                             <div>
                                 <h3 class="text-2xl font-bold text-slate-900 dark:text-white leading-tight break-words" id="modal-fullname">Lade Titel...</h3>
+                                
+                                <!-- ROW 1: Basic Info -->
                                 <div class="flex flex-wrap gap-2 mt-3 text-xs font-mono text-slate-500 dark:text-slate-400 items-center">
-                                    <span class="bg-slate-100 dark:bg-slate-800 px-2 py-1 rounded border border-slate-200 dark:border-slate-600">SYM: <strong id="modal-symbol" class="text-slate-900 dark:text-slate-200">---</strong></span>
-                                    <span class="bg-slate-100 dark:bg-slate-800 px-2 py-1 rounded border border-slate-200 dark:border-slate-600">BÖRSE: <strong id="modal-exchange" class="text-slate-900 dark:text-slate-200">---</strong></span>
-                                    <span class="bg-slate-100 dark:bg-slate-800 px-2 py-1 rounded border border-slate-200 dark:border-slate-600">TYP: <strong id="modal-type" class="text-slate-900 dark:text-slate-200">---</strong></span>
-                                    <span class="bg-slate-100 dark:bg-slate-800 px-2 py-1 rounded border border-slate-200 dark:border-slate-600">ZEIT: <strong id="dynamic-range-text" class="text-slate-900 dark:text-slate-200">...</strong></span>
+                                    <span class="bg-slate-100 dark:bg-slate-800 px-2 py-1 rounded border border-slate-200 dark:border-slate-600">
+                                        SYMBOL: <strong id="modal-symbol" class="text-slate-900 dark:text-slate-200">---</strong>
+                                    </span>
+                                    <span class="bg-slate-100 dark:bg-slate-800 px-2 py-1 rounded border border-slate-200 dark:border-slate-600">
+                                        BÖRSE: <strong id="modal-exchange" class="text-slate-900 dark:text-slate-200">---</strong>
+                                    </span>
+                                    <span class="bg-slate-100 dark:bg-slate-800 px-2 py-1 rounded border border-slate-200 dark:border-slate-600">
+                                        TYP: <strong id="modal-type" class="text-slate-900 dark:text-slate-200">---</strong>
+                                    </span>
+                                    <span class="bg-slate-100 dark:bg-slate-800 px-2 py-1 rounded border border-slate-200 dark:border-slate-600">
+                                        ZEIT: <strong id="dynamic-range-text" class="text-slate-900 dark:text-slate-200">...</strong>
+                                    </span>
                                 </div>
+
+                                <!-- ROW 2: Technicals -->
                                 <div class="flex flex-wrap gap-2 mt-2 text-xs font-mono text-slate-500 dark:text-slate-400 items-center">
-                                    <span class="bg-slate-100 dark:bg-slate-800 px-2 py-1 rounded border border-slate-200 dark:border-slate-600">PERFORMANCE: <strong id="chart-performance">...</strong></span>
-                                    <span class="bg-slate-100 dark:bg-slate-800 px-2 py-1 rounded border border-slate-200 dark:border-slate-600">VOLATILITÄT: <strong id="modal-vol" class="text-slate-900 dark:text-slate-200">---</strong></span>
-                                    <span class="bg-slate-100 dark:bg-slate-800 px-2 py-1 rounded border border-slate-200 dark:border-slate-600">TREND: <strong id="modal-trend" class="text-slate-900 dark:text-slate-200">---</strong></span>
+                                    <span class="bg-slate-100 dark:bg-slate-800 px-2 py-1 rounded border border-slate-200 dark:border-slate-600">
+                                        PERFORMANCE: <strong id="chart-performance">...</strong>
+                                    </span>
+                                    <span class="bg-slate-100 dark:bg-slate-800 px-2 py-1 rounded border border-slate-200 dark:border-slate-600">
+                                        VOLATILITÄT: <strong id="modal-vol" class="text-slate-900 dark:text-slate-200">---</strong>
+                                    </span>
+                                    <span class="bg-slate-100 dark:bg-slate-800 px-2 py-1 rounded border border-slate-200 dark:border-slate-600">
+                                        TREND: <strong id="modal-trend" class="text-slate-900 dark:text-slate-200">---</strong>
+                                    </span>
                                 </div>
                             </div>
                             <div class="w-full overflow-x-auto no-scrollbar pb-1 flex justify-end">
@@ -91,23 +120,13 @@
         </div>
     </div>
 
-    <!-- FOOTER: NEW BUTTON -->
+    <!-- FOOTER -->
     <footer class="bg-white dark:bg-dark-surface border-t border-slate-200 dark:border-slate-700 py-8 mt-auto">
         <div class="max-w-7xl mx-auto px-4 flex flex-col items-center gap-4">
-            <!-- Action Buttons -->
             <div class="flex flex-wrap justify-center gap-4">
-                <!-- NEW: Copy List -->
-                <button id="copy-list-btn" class="text-xs font-medium text-slate-600 dark:text-slate-300 hover:text-primary dark:hover:text-neon-accent transition-colors flex items-center gap-2 border border-slate-200 dark:border-slate-700 px-4 py-2 rounded-full hover:bg-slate-50 dark:hover:bg-slate-800 shadow-sm">
-                    <i class="fa-solid fa-list-ol"></i> Liste kopieren
-                </button>
-
-                <!-- Existing Buttons -->
-                <button id="export-btn" class="text-xs font-medium text-slate-500 hover:text-primary dark:hover:text-neon-accent transition-colors flex items-center gap-2 border border-slate-200 dark:border-slate-700 px-3 py-1.5 rounded-full hover:bg-slate-50 dark:hover:bg-slate-800">
-                    <i class="fa-solid fa-download"></i> Depot sichern
-                </button>
-                <button id="import-btn" class="text-xs font-medium text-slate-500 hover:text-primary dark:hover:text-neon-accent transition-colors flex items-center gap-2 border border-slate-200 dark:border-slate-700 px-3 py-1.5 rounded-full hover:bg-slate-50 dark:hover:bg-slate-800">
-                    <i class="fa-solid fa-upload"></i> Depot laden
-                </button>
+                <button id="copy-list-btn" class="text-xs font-medium text-slate-600 dark:text-slate-300 hover:text-primary dark:hover:text-neon-accent transition-colors flex items-center gap-2 border border-slate-200 dark:border-slate-700 px-4 py-2 rounded-full hover:bg-slate-50 dark:hover:bg-slate-800 shadow-sm"><i class="fa-solid fa-list-ol"></i> Liste kopieren</button>
+                <button id="export-btn" class="text-xs font-medium text-slate-500 hover:text-primary dark:hover:text-neon-accent transition-colors flex items-center gap-2 border border-slate-200 dark:border-slate-700 px-3 py-1.5 rounded-full hover:bg-slate-50 dark:hover:bg-slate-800"><i class="fa-solid fa-download"></i> Depot sichern</button>
+                <button id="import-btn" class="text-xs font-medium text-slate-500 hover:text-primary dark:hover:text-neon-accent transition-colors flex items-center gap-2 border border-slate-200 dark:border-slate-700 px-3 py-1.5 rounded-full hover:bg-slate-50 dark:hover:bg-slate-800"><i class="fa-solid fa-upload"></i> Depot laden</button>
                 <input type="file" id="import-input" class="hidden" accept=".json">
             </div>
             <div class="text-center text-xs text-slate-400 dark:text-slate-500"><p>Local-First PWA running on GitHub Pages.</p><p class="mt-1">&copy; 2025 AlphaView Analytics.</p></div>
@@ -115,6 +134,6 @@
     </footer>
 
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-    <script type="module" src="js/app.js?v=48"></script>
+    <script type="module" src="js/app.js?v=Final49"></script>
 </body>
 </html>
