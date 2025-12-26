@@ -1,6 +1,6 @@
 /**
  * AlphaView Main Controller
- * Currency Conversion Update
+ * Fixed: Portfolio Calculation & Currency Safety
  */
 import { initTheme, toggleTheme } from './theme.js';
 import { fetchChartData, searchSymbol } from './api.js';
@@ -14,7 +14,7 @@ const state = {
     currentSymbol: null,
     currentRange: '1y',
     dashboardData: [],
-    eurUsdRate: 1.08 // Fallback, wird live geholt
+    eurUsdRate: 1.08 // Fallback Rate
 };
 
 const rootEl = document.getElementById('app-root');
@@ -55,33 +55,47 @@ async function loadDashboard() {
         gridEl.innerHTML = '<div class="col-span-full text-center text-slate-400 py-8 animate-pulse">Lade Kurse & Wechselkurse...</div>';
     }
 
-    // 1. EXCHANGE RATE FETCH (Parallel)
-    // Wir holen EURUSD=X um von USD in EUR und umgekehrt zu rechnen
-    const ratePromise = fetchChartData('EURUSD=X', '5d', '1d');
-
-    // 2. STOCK DATA FETCH
-    const stockPromises = watchlist.map(async (item) => {
+    try {
+        // 1. EXCHANGE RATE FETCH (Fehler-Tolerant)
+        // Wir versuchen den Kurs zu holen, wenn es schiefgeht, nehmen wir den Fallback
+        let rateData = null;
         try {
-            const rawData = await fetchChartData(item.symbol, '1y', '1d');
-            if (!rawData) return null;
-            const analysis = analyze(rawData);
-            analysis.qty = item.qty; 
-            return analysis;
-        } catch (e) { return null; }
-    });
+            rateData = await fetchChartData('EURUSD=X', '5d', '1d');
+        } catch (e) {
+            console.warn("Währungskurs konnte nicht geladen werden, nutze Fallback.", e);
+        }
 
-    // Wait for all
-    const [rateData, ...stockResults] = await Promise.all([ratePromise, ...stockPromises]);
-    
-    // Rate speichern
-    if(rateData && rateData.indicators.quote[0].close) {
-        const closes = rateData.indicators.quote[0].close;
-        const currentRate = closes[closes.length - 1];
-        if(currentRate) state.eurUsdRate = currentRate;
+        // 2. STOCK DATA FETCH
+        const stockPromises = watchlist.map(async (item) => {
+            try {
+                const rawData = await fetchChartData(item.symbol, '1y', '1d');
+                if (!rawData) return null;
+                const analysis = analyze(rawData);
+                analysis.qty = item.qty; 
+                return analysis;
+            } catch (e) { return null; }
+        });
+
+        // Alles parallel ausführen
+        const stockResults = await Promise.all(stockPromises);
+        
+        // Rate verarbeiten
+        if(rateData && rateData.indicators && rateData.indicators.quote[0].close) {
+            const closes = rateData.indicators.quote[0].close;
+            // Nimm den letzten gültigen Wert
+            const currentRate = closes.filter(c => c).pop();
+            if(currentRate) state.eurUsdRate = currentRate;
+        }
+
+        state.dashboardData = stockResults.filter(r => r !== null);
+        
+        // WICHTIG: Rendern aufrufen!
+        renderDashboardGrid();
+
+    } catch (criticalError) {
+        console.error("Kritischer Fehler im Dashboard:", criticalError);
+        gridEl.innerHTML = '<div class="col-span-full text-center text-red-500">Fehler beim Laden. Bitte neu laden.</div>';
     }
-
-    state.dashboardData = stockResults.filter(r => r !== null);
-    renderDashboardGrid();
 }
 
 function renderDashboardGrid() {
@@ -90,27 +104,31 @@ function renderDashboardGrid() {
     const totalUsdEl = document.getElementById('total-balance-usd');
     const totalPosEl = document.getElementById('total-positions');
 
+    // Prüfen ob Elemente da sind (Sicherheit)
+    if (!totalEurEl || !totalUsdEl) {
+        console.warn("UI Elemente für Portfolio-Summary fehlen.");
+    }
+
     let totalEUR = 0;
 
     state.dashboardData.forEach(item => {
         const rawValue = item.price * item.qty;
         
-        // Währungsumrechnung zur Basis EUR
+        // Währungsumrechnung
         if (item.currency === 'EUR') {
             totalEUR += rawValue;
         } else if (item.currency === 'USD') {
-            // Umrechnen: USD-Wert geteilt durch Kurs (z.B. 100$ / 1.08 = 92€)
+            // Wenn Kurs 1.08 ist, dann sind 100 USD ca 92 EUR (100 / 1.08)
             totalEUR += (rawValue / state.eurUsdRate);
         } else {
-            // Andere Währungen (z.B. GBP) ignorieren wir hier für die Demo oder nehmen 1:1
+            // Fallback 1:1 für unbekannte Währungen
             totalEUR += rawValue;
         }
     });
 
-    // USD Total berechnen: EUR * Rate
     const totalUSD = totalEUR * state.eurUsdRate;
 
-    // Header Updaten
+    // UI Updates mit Sicherheitschecks
     if(totalEurEl) totalEurEl.textContent = formatMoney(totalEUR, 'EUR');
     if(totalUsdEl) totalUsdEl.textContent = formatMoney(totalUSD, 'USD');
     if(totalPosEl) totalPosEl.textContent = state.dashboardData.length;
