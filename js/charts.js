@@ -1,7 +1,6 @@
 /**
  * Charts Module
- * Renders interactive charts using Chart.js.
- * Fixed: Robust Date Range Text Update
+ * Final Fix: Date Range Text & Axis Formatting
  */
 let chartInstance = null;
 
@@ -10,8 +9,8 @@ const formatCurrencyValue = (val, currency) => {
     return new Intl.NumberFormat(locale, { style: 'currency', currency: currency }).format(val);
 };
 
+// KW Berechnung
 function getWeekNumber(date) {
-    // Sicherheitskopie des Datums, um Original nicht zu ändern
     const d = new Date(Date.UTC(date.getFullYear(), date.getMonth(), date.getDate()));
     const dayNum = d.getUTCDay() || 7;
     d.setUTCDate(d.getUTCDate() + 4 - dayNum);
@@ -19,8 +18,9 @@ function getWeekNumber(date) {
     return Math.ceil((((d - yearStart) / 86400000) + 1) / 7);
 }
 
+// Wochen-Grenzen (Mo-Fr)
 function getWeekBounds(date) {
-    const d = new Date(date); // Kopie
+    const d = new Date(date);
     const day = d.getDay() || 7; 
     if (day !== 1) d.setHours(-24 * (day - 1));
     const monday = new Date(d);
@@ -29,15 +29,15 @@ function getWeekBounds(date) {
     return { monday, friday };
 }
 
-// Hier passiert das Text-Update für den Zeitraum
+// Text Update (Badge)
 function updateRangeInfo(labels, range) {
     const el = document.getElementById('dynamic-range-text');
     
-    // Safety Checks
     if (!el) {
-        console.warn("Element 'dynamic-range-text' nicht gefunden!");
+        console.error("Badge Element 'dynamic-range-text' nicht gefunden!");
         return;
     }
+    
     if (!labels || labels.length === 0) {
         el.textContent = "Keine Daten";
         return;
@@ -47,7 +47,6 @@ function updateRangeInfo(labels, range) {
         const start = labels[0];
         const end = labels[labels.length - 1];
         
-        // Formatter erstellen
         const fDate = (d) => d.toLocaleDateString('de-DE', { day: '2-digit', month: '2-digit', year: 'numeric' });
         const fMonthYear = (d) => d.toLocaleDateString('de-DE', { month: '2-digit', year: 'numeric' });
         const fYear = (d) => d.getFullYear(); 
@@ -55,36 +54,35 @@ function updateRangeInfo(labels, range) {
 
         let text = "";
 
-        switch(range) {
-            case '1d':
-                text = `Handelstag: ${fDate(end)} <span class="opacity-50 ml-1 font-normal">(${fmtTime.format(end)})</span>`;
-                break;
-            case '5d':
-                const kw = getWeekNumber(end);
-                const bounds = getWeekBounds(end);
-                text = `KW ${kw} (${fDate(bounds.monday)} – ${fDate(bounds.friday)})`;
-                break;
-            case '1mo':
-            case '6mo':
-                text = `${fMonthYear(start).replace('.','/')} – ${fMonthYear(end).replace('.','/')}`;
-                break;
-            case '1y':
-                const y1 = fYear(start);
-                const y2 = fYear(end);
-                text = (y1 === y2) ? `${y1}` : `${y1} – ${y2}`;
-                break;
-            default:
-                // 5y, 10y, max
-                text = `${fYear(start)} – ${fYear(end)}`;
-                break;
+        // Logik für den Text
+        if (range === '1d') {
+            text = `Handelstag: ${fDate(end)} <span class="opacity-50 ml-1 font-normal">(${fmtTime.format(end)})</span>`;
+        } 
+        else if (range === '5d') {
+            const kw = getWeekNumber(end);
+            const bounds = getWeekBounds(end);
+            text = `KW ${kw} (${fDate(bounds.monday)} – ${fDate(bounds.friday)})`;
+        } 
+        else if (range === '1mo' || range === '6mo') {
+            text = `${fMonthYear(start).replace('.','/')} – ${fMonthYear(end).replace('.','/')}`;
+        } 
+        else if (range === '1y') {
+            const y1 = fYear(start);
+            const y2 = fYear(end);
+            text = (y1 === y2) ? `${y1}` : `${y1} – ${y2}`;
+        } 
+        else {
+            // 5y, 10y, max
+            text = `${fYear(start)} – ${fYear(end)}`;
         }
         
-        // Text setzen
+        // Text in das HTML Element schreiben
         el.innerHTML = text;
+        console.log("Range Text updated to:", text); // Debug Log
 
     } catch (err) {
-        console.error("Fehler beim Datumsformatieren:", err);
-        el.textContent = "Zeitraum Fehler";
+        console.error("Error formatting date:", err);
+        el.textContent = "Datum Fehler";
     }
 }
 
@@ -97,10 +95,10 @@ export function renderChart(canvasId, rawData, range = '1y') {
     const prices = rawData.indicators.quote[0].close;
     const currency = rawData.meta.currency || 'USD';
 
-    // Konvertiere Timestamps zu echten Date Objekten
+    // Dates erstellen
     const labels = timestamps.map(t => new Date(t * 1000));
 
-    // Rufe die Text-Update Funktion auf
+    // 1. Text aktualisieren
     updateRangeInfo(labels, range);
 
     if (chartInstance) chartInstance.destroy();
@@ -148,6 +146,7 @@ export function renderChart(canvasId, rawData, range = '1y') {
                     callbacks: {
                         title: function(context) {
                             const d = labels[context[0].dataIndex];
+                            // Tooltip
                             if (range === '1d' || range === '5d') {
                                 return d.toLocaleDateString('de-DE', { weekday: 'short', day: '2-digit', month: '2-digit', hour: '2-digit', minute:'2-digit' });
                             }
@@ -165,8 +164,16 @@ export function renderChart(canvasId, rawData, range = '1y') {
                         callback: function(val, index) {
                             const d = labels[index];
                             if (!d) return '';
-                            if (range === '1d') return d.toLocaleTimeString('de-DE', { hour: '2-digit', minute:'2-digit' });
-                            if (range === '5d') return d.toLocaleDateString('de-DE', { weekday: 'short', day: '2-digit', month: '2-digit' });
+                            
+                            // 1T -> Uhrzeit
+                            if (range === '1d') {
+                                return d.toLocaleTimeString('de-DE', { hour: '2-digit', minute:'2-digit' });
+                            }
+                            // 1W -> Wochentag + Datum (HIER WAR DAS PROBLEM BEHOBEN)
+                            if (range === '5d') {
+                                return d.toLocaleDateString('de-DE', { weekday: 'short', day: '2-digit' });
+                            }
+                            
                             return d.toLocaleDateString('de-DE', { day: '2-digit', month: '2-digit', year: '2-digit' });
                         }
                     }
