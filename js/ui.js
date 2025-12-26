@@ -1,3 +1,8 @@
+/**
+ * UI Module
+ * Enhanced Search Results
+ */
+
 export const formatMoney = (val, currency) => {
     const locale = (currency === 'EUR') ? 'de-DE' : 'en-US';
     return new Intl.NumberFormat(locale, { style: 'currency', currency: currency }).format(val);
@@ -22,7 +27,10 @@ export function renderAppSkeleton(container) {
         <!-- SEARCH -->
         <div class="mb-8 relative max-w-xl mx-auto">
             <div class="relative">
-                <input type="text" id="search-input" class="w-full bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-600 text-slate-900 dark:text-white rounded-lg pl-12 pr-4 py-3 shadow-sm focus:ring-2 focus:ring-primary outline-none" placeholder="Symbol suchen (z.B. SAP.DE, TSLA)..." autocomplete="off">
+                <!-- Hinweis im Placeholder bzgl. WKN -->
+                <input type="text" id="search-input" 
+                    class="w-full bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-600 text-slate-900 dark:text-white rounded-lg pl-12 pr-4 py-3 shadow-sm focus:ring-2 focus:ring-primary outline-none" 
+                    placeholder="Suche Name, Symbol oder ISIN (Keine WKN)..." autocomplete="off">
                 <i class="fa-solid fa-magnifying-glass absolute left-4 top-3.5 text-slate-400"></i>
                 <div id="search-spinner" class="hidden absolute right-4 top-3.5"><i class="fa-solid fa-circle-notch fa-spin text-primary"></i></div>
             </div>
@@ -36,7 +44,7 @@ export function renderAppSkeleton(container) {
         <div id="empty-state" class="hidden text-center py-12">
             <div class="inline-flex items-center justify-center w-16 h-16 rounded-full bg-slate-100 dark:bg-slate-800 mb-4"><i class="fa-solid fa-layer-group text-slate-400 text-2xl"></i></div>
             <h3 class="text-lg font-medium text-slate-900 dark:text-white">Watchlist leer</h3>
-            <p class="text-slate-500 max-w-sm mx-auto mt-2">Suche oben nach Symbolen.</p>
+            <p class="text-slate-500 max-w-sm mx-auto mt-2">Suche nach Firmennamen oder ETFs (z.B. "Vanguard").</p>
         </div>
     `;
 }
@@ -91,22 +99,41 @@ export function createStockCardHTML(data, qty, totalPortfolioValue) {
     `;
 }
 
+// Map für schöne Typ-Anzeige in der Suche
+const TYPE_BADGES = {
+    'EQUITY': { label: 'AKTIE', color: 'bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200' },
+    'ETF': { label: 'ETF', color: 'bg-purple-100 text-purple-800 dark:bg-purple-900 dark:text-purple-200' },
+    'MUTUALFUND': { label: 'FONDS', color: 'bg-orange-100 text-orange-800 dark:bg-orange-900 dark:text-orange-200' },
+    'CRYPTOCURRENCY': { label: 'KRYPTO', color: 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200' },
+    'INDEX': { label: 'INDEX', color: 'bg-slate-100 text-slate-800 dark:bg-slate-700 dark:text-slate-200' }
+};
+
 export function renderSearchResults(results, container) {
     if (results.length === 0) {
-        container.innerHTML = `<div class="p-4 text-sm text-slate-500 text-center">Keine Ergebnisse</div>`;
+        container.innerHTML = `<div class="p-4 text-sm text-slate-500 text-center">Keine Ergebnisse. Versuche den Namen (z.B. "Vanguard").</div>`;
         container.classList.remove('hidden');
         return;
     }
-    container.innerHTML = results.map(item => `
-        <div class="search-item px-4 py-3 hover:bg-slate-50 dark:hover:bg-slate-700/50 cursor-pointer border-b border-slate-100 dark:border-slate-700 last:border-0 transition-colors" data-symbol="${item.symbol}">
+
+    container.innerHTML = results.map(item => {
+        const badge = TYPE_BADGES[item.type] || { label: item.type, color: 'bg-slate-100 text-slate-600' };
+        
+        return `
+        <div class="search-item px-4 py-3 hover:bg-slate-50 dark:hover:bg-slate-700/50 cursor-pointer border-b border-slate-100 dark:border-slate-700 last:border-0 transition-colors group" data-symbol="${item.symbol}">
             <div class="flex justify-between items-center">
-                <div>
-                    <div class="font-bold text-slate-900 dark:text-white text-sm">${item.symbol}</div>
-                    <div class="text-xs text-slate-500 truncate max-w-[200px]">${item.name}</div>
+                <div class="flex-grow min-w-0 mr-4">
+                    <div class="flex items-center gap-2 mb-0.5">
+                        <span class="font-bold text-slate-900 dark:text-white text-sm whitespace-nowrap">${item.symbol}</span>
+                        <span class="text-[10px] font-bold px-1.5 py-0.5 rounded ${badge.color}">${badge.label}</span>
+                    </div>
+                    <div class="text-xs text-slate-500 truncate" title="${item.name}">${item.name}</div>
                 </div>
-                <div class="text-xs font-mono bg-slate-100 dark:bg-slate-700 text-slate-500 px-2 py-1 rounded">${item.exchange}</div>
+                <div class="text-xs font-mono bg-slate-100 dark:bg-slate-700 text-slate-500 px-2 py-1 rounded whitespace-nowrap group-hover:bg-white dark:group-hover:bg-slate-600 transition-colors">
+                    ${item.exchange}
+                </div>
             </div>
         </div>
-    `).join('');
+    `}).join('');
+    
     container.classList.remove('hidden');
 }

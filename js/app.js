@@ -1,229 +1,77 @@
-import { initTheme, toggleTheme } from './theme.js';
-import { fetchChartData, searchSymbol } from './api.js';
-import { analyze } from './analysis.js';
-import { getWatchlist, addSymbol, removeSymbol, updateQuantity } from './store.js';
-import { renderAppSkeleton, createStockCardHTML, renderSearchResults, formatMoney } from './ui.js';
-import { renderChart } from './charts.js';
+/**
+ * API Module
+ * Improved Search for ETFs
+ */
 
-const state = {
-    searchDebounce: null,
-    currentSymbol: null,
-    currentRange: '1y',
-    dashboardData: []
-};
+const PROXIES = [
+    'https://corsproxy.io/?',
+    'https://api.allorigins.win/raw?url='
+];
 
-const rootEl = document.getElementById('app-root');
-const themeBtn = document.getElementById('theme-toggle');
+const BASE_URL_V8 = 'https://query1.finance.yahoo.com/v8/finance/chart';
+const BASE_URL_SEARCH = 'https://query1.finance.yahoo.com/v1/finance/search';
 
-const modal = document.getElementById('chart-modal');
-const modalFullname = document.getElementById('modal-fullname');
-const modalSymbol = document.getElementById('modal-symbol');
-const modalExchange = document.getElementById('modal-exchange');
-const modalType = document.getElementById('modal-type');
-const closeModalBtns = [document.getElementById('close-modal'), document.getElementById('close-modal-btn')];
-const rangeBtns = document.querySelectorAll('.chart-range-btn');
-
-async function loadDashboard() {
-    const watchlist = getWatchlist();
-    const gridEl = document.getElementById('dashboard-grid');
-    const emptyStateEl = document.getElementById('empty-state');
-    const summaryEl = document.getElementById('portfolio-summary');
-
-    if (!gridEl) return;
-
-    if (watchlist.length === 0) {
-        gridEl.innerHTML = '';
-        if(emptyStateEl) emptyStateEl.classList.remove('hidden');
-        if(summaryEl) summaryEl.classList.add('hidden');
-        return;
-    }
-
-    if(emptyStateEl) emptyStateEl.classList.add('hidden');
-    if(summaryEl) summaryEl.classList.remove('hidden');
-    
-    if(!gridEl.hasChildNodes()) {
-        gridEl.innerHTML = '<div class="col-span-full text-center text-slate-400 py-8 animate-pulse">Lade Kurse...</div>';
-    }
-
-    const promises = watchlist.map(async (item) => {
+async function fetchViaProxy(targetUrl) {
+    let lastError = null;
+    for (const proxyBase of PROXIES) {
         try {
-            const rawData = await fetchChartData(item.symbol, '1y', '1d');
-            if (!rawData) return null;
-            const analysis = analyze(rawData);
-            analysis.qty = item.qty; 
-            return analysis;
-        } catch (e) { return null; }
-    });
+            const requestUrl = `${proxyBase}${encodeURIComponent(targetUrl)}`;
+            const controller = new AbortController();
+            const timeoutId = setTimeout(() => controller.abort(), 6000);
 
-    const results = await Promise.all(promises);
-    state.dashboardData = results.filter(r => r !== null);
-    renderDashboardGrid();
-}
+            const response = await fetch(requestUrl, { signal: controller.signal });
+            clearTimeout(timeoutId);
 
-function renderDashboardGrid() {
-    const gridEl = document.getElementById('dashboard-grid');
-    const totalBalanceEl = document.getElementById('total-balance');
-    const totalPosEl = document.getElementById('total-positions');
-
-    let totalValue = 0;
-    state.dashboardData.forEach(item => {
-        totalValue += (item.price * item.qty);
-    });
-
-    const mainCurrency = state.dashboardData.length > 0 ? state.dashboardData[0].currency : 'EUR';
-    if(totalBalanceEl) totalBalanceEl.textContent = formatMoney(totalValue, mainCurrency);
-    if(totalPosEl) totalPosEl.textContent = state.dashboardData.length;
-
-    gridEl.innerHTML = state.dashboardData
-        .map(data => createStockCardHTML(data, data.qty, totalValue))
-        .join('');
-
-    attachDashboardEvents();
-}
-
-function attachDashboardEvents() {
-    document.querySelectorAll('.delete-btn').forEach(btn => {
-        btn.addEventListener('click', (e) => {
-            e.stopPropagation();
-            const sym = e.currentTarget.dataset.symbol;
-            if(confirm(`${sym} entfernen?`)) {
-                removeSymbol(sym);
-                loadDashboard();
-            }
-        });
-    });
-
-    document.querySelectorAll('.stock-card').forEach(card => {
-        card.addEventListener('click', (e) => {
-            if(e.target.tagName === 'INPUT' || e.target.closest('.delete-btn')) return;
-            const sym = e.currentTarget.dataset.symbol;
-            openModal(sym);
-        });
-    });
-
-    document.querySelectorAll('.qty-input').forEach(input => {
-        input.addEventListener('change', (e) => {
-            const sym = e.target.dataset.symbol;
-            const newQty = parseFloat(e.target.value);
-            if(isNaN(newQty) || newQty < 0) return;
-            updateQuantity(sym, newQty);
-            const item = state.dashboardData.find(d => d.symbol === sym);
-            if(item) item.qty = newQty;
-            renderDashboardGrid();
-        });
-        input.addEventListener('click', (e) => e.stopPropagation());
-    });
-}
-
-async function openModal(symbol) {
-    if(!modal) return;
-    state.currentSymbol = symbol;
-    state.currentRange = '1y'; 
-    modalFullname.textContent = 'Lade Daten...';
-    modalSymbol.textContent = symbol;
-    modalExchange.textContent = '...';
-    modalType.textContent = '...';
-    modal.classList.remove('hidden');
-    updateRangeButtonsUI('1y');
-    await loadChartForModal(symbol, '1y');
-}
-
-function closeModal() {
-    if(modal) modal.classList.add('hidden');
-    state.currentSymbol = null;
-}
-
-function updateRangeButtonsUI(activeRange) {
-    rangeBtns.forEach(btn => {
-        const range = btn.dataset.range;
-        btn.classList.remove('bg-white', 'dark:bg-slate-600', 'text-primary', 'dark:text-white', 'shadow-sm');
-        btn.classList.add('text-slate-600', 'dark:text-slate-400', 'hover:bg-white');
-        if(range === activeRange) {
-            btn.classList.remove('text-slate-600', 'dark:text-slate-400', 'hover:bg-white');
-            btn.classList.add('bg-white', 'dark:bg-slate-600', 'text-primary', 'dark:text-white', 'shadow-sm');
+            if (!response.ok) throw new Error(`Status ${response.status}`);
+            return await response.json();
+        } catch (error) {
+            lastError = error;
         }
-    });
+    }
+    throw lastError || new Error('All proxies failed');
 }
 
-async function loadChartForModal(symbol, requestedRange) {
-    const canvasId = 'main-chart';
-    const canvas = document.getElementById(canvasId);
-    if(canvas) canvas.style.opacity = '0.5';
+export async function fetchChartData(symbol, range = '1y', interval = '1d') {
+    try {
+        const targetUrl = `${BASE_URL_V8}/${symbol}?interval=${interval}&range=${range}`;
+        const data = await fetchViaProxy(targetUrl);
+
+        if (!data.chart || !data.chart.result || data.chart.result.length === 0) {
+            throw new Error('Invalid Data');
+        }
+        return data.chart.result[0];
+    } catch (error) {
+        console.error(`Fetch failed for ${symbol}:`, error);
+        return null;
+    }
+}
+
+export async function searchSymbol(query) {
+    if (!query || query.length < 1) return [];
 
     try {
-        let interval = '1d';
-        if (requestedRange === '5y' || requestedRange === '10y') interval = '1wk';
-        else if (requestedRange === 'max') interval = '1mo';
+        // Wir holen 10 Ergebnisse, damit auch lokale Börsen (DE) dabei sind
+        const targetUrl = `${BASE_URL_SEARCH}?q=${query}&quotesCount=10&newsCount=0`;
+        const data = await fetchViaProxy(targetUrl);
 
-        const rawData = await fetchChartData(symbol, requestedRange, interval);
-        if(rawData) {
-            renderChart(canvasId, rawData);
-            if(rawData.meta) {
-                if(modalExchange) modalExchange.textContent = rawData.meta.exchangeName || rawData.meta.exchangeTimezoneName || 'N/A';
-                if(modalType) modalType.textContent = rawData.meta.instrumentType || 'STOCK';
-                if(modalFullname) modalFullname.textContent = `${symbol} (${rawData.meta.currency})`; 
-            }
-        }
-    } catch (e) { console.error(e); if(modalFullname) modalFullname.textContent = "Fehler"; } 
-    finally { if(canvas) canvas.style.opacity = '1'; }
+        if (!data.quotes) return [];
+
+        return data.quotes
+            .filter(q => {
+                // Wir wollen Aktien, ETFs, Fonds, Indizes und Krypto
+                const validTypes = ['EQUITY', 'ETF', 'MUTUALFUND', 'INDEX', 'CRYPTOCURRENCY', 'CURRENCY'];
+                return q.isYahooFinance && validTypes.includes(q.quoteType);
+            })
+            .map(q => ({
+                symbol: q.symbol,
+                name: q.shortname || q.longname,
+                type: q.quoteType, // z.B. ETF, EQUITY
+                exchange: q.exchange, // z.B. GER (Xetra), NMS (Nasdaq)
+                score: q.score // Relevanz
+            }));
+
+    } catch (error) {
+        console.error('Search failed:', error);
+        return [];
+    }
 }
-
-rangeBtns.forEach(btn => {
-    btn.addEventListener('click', () => {
-        if(!state.currentSymbol) return;
-        const range = btn.dataset.range;
-        state.currentRange = range;
-        updateRangeButtonsUI(range);
-        loadChartForModal(state.currentSymbol, range);
-    });
-});
-
-function initSearch() {
-    const input = document.getElementById('search-input');
-    const resultsContainer = document.getElementById('search-results');
-    const spinner = document.getElementById('search-spinner');
-
-    if(!input) return;
-    document.addEventListener('click', (e) => {
-        if (!e.target.closest('#search-input') && !e.target.closest('#search-results')) resultsContainer.classList.add('hidden');
-    });
-
-    input.addEventListener('input', (e) => {
-        const query = e.target.value.trim();
-        clearTimeout(state.searchDebounce);
-        if (query.length < 2) { resultsContainer.classList.add('hidden'); return; }
-        spinner.classList.remove('hidden');
-        state.searchDebounce = setTimeout(async () => {
-            const results = await searchSymbol(query);
-            spinner.classList.add('hidden');
-            renderSearchResults(results, resultsContainer);
-            document.querySelectorAll('.search-item').forEach(item => {
-                item.addEventListener('click', () => {
-                    addSymbol(item.dataset.symbol);
-                    input.value = '';
-                    resultsContainer.classList.add('hidden');
-                    loadDashboard();
-                });
-            });
-        }, 500);
-    });
-}
-
-document.addEventListener('DOMContentLoaded', async () => {
-    const currentTheme = initTheme();
-    const updateIcon = (mode) => {
-        const icon = themeBtn?.querySelector('i');
-        if(icon) {
-            if (mode === 'dark') { icon.classList.remove('fa-moon'); icon.classList.add('fa-sun'); } 
-            else { icon.classList.remove('fa-sun'); icon.classList.add('fa-moon'); }
-        }
-    };
-    updateIcon(currentTheme);
-    if(themeBtn) themeBtn.addEventListener('click', () => updateIcon(toggleTheme()));
-
-    renderAppSkeleton(rootEl);
-    closeModalBtns.forEach(btn => btn?.addEventListener('click', closeModal));
-    if(modal) modal.addEventListener('click', (e) => { if(e.target === modal) closeModal(); });
-    initSearch();
-    loadDashboard();
-});
