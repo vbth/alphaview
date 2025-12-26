@@ -1,6 +1,6 @@
 /**
  * UI Module
- * Multi-Currency Header
+ * Added: Search Helper Text & Full Names
  */
 
 export const formatMoney = (val, currency) => {
@@ -16,9 +16,7 @@ export function renderAppSkeleton(container) {
         <div id="portfolio-summary" class="hidden mb-8 bg-white dark:bg-dark-surface rounded-xl p-6 shadow-sm border border-slate-200 dark:border-slate-700 flex flex-col md:flex-row justify-between items-center gap-4">
             <div>
                 <h2 class="text-sm font-medium text-slate-500 dark:text-slate-400 uppercase tracking-wider mb-2">Gesamtdepotwert</h2>
-                <!-- EUR -->
                 <div class="text-4xl font-bold text-slate-900 dark:text-white" id="total-balance-eur">---</div>
-                <!-- USD -->
                 <div class="text-lg font-mono font-medium text-slate-500 dark:text-slate-400 mt-1" id="total-balance-usd">---</div>
             </div>
             
@@ -30,15 +28,22 @@ export function renderAppSkeleton(container) {
             </div>
         </div>
 
-        <!-- SEARCH -->
+        <!-- SEARCH SECTION -->
         <div class="mb-8 relative max-w-xl mx-auto">
             <div class="relative">
                 <input type="text" id="search-input" 
                     class="w-full bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-600 text-slate-900 dark:text-white rounded-lg pl-12 pr-4 py-3 shadow-sm focus:ring-2 focus:ring-primary outline-none" 
-                    placeholder="Suche Name oder Symbol..." autocomplete="off">
+                    placeholder="Suche Name (z.B. Vanguard) oder Symbol..." autocomplete="off">
                 <i class="fa-solid fa-magnifying-glass absolute left-4 top-3.5 text-slate-400"></i>
                 <div id="search-spinner" class="hidden absolute right-4 top-3.5"><i class="fa-solid fa-circle-notch fa-spin text-primary"></i></div>
             </div>
+            
+            <!-- HIER IST DIE KURZANLEITUNG -->
+            <p class="text-xs text-slate-400 dark:text-slate-500 mt-2 ml-1">
+                <i class="fa-solid fa-circle-info mr-1"></i>
+                Tipp: Findest du einen ETF nicht? Tippe das Yahoo-Kürzel (z.B. <code class="bg-slate-100 dark:bg-slate-700 px-1 rounded">EUNL.DE</code>) und drücke <strong>ENTER</strong>.
+            </p>
+
             <div id="search-results" class="hidden absolute w-full bg-white dark:bg-slate-800 mt-2 rounded-lg shadow-xl border border-slate-200 dark:border-slate-700 z-50 overflow-hidden max-h-80 overflow-y-auto"></div>
         </div>
 
@@ -59,15 +64,11 @@ export function createStockCardHTML(data, qty, totalPortfolioValueEUR, eurUsdRat
     const colorClass = isUp ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400';
     const trendIcon = data.trend === 'bullish' ? 'fa-arrow-trend-up' : (data.trend === 'bearish' ? 'fa-arrow-trend-down' : 'fa-minus');
     
-    // Positionswert berechnen (Nativ)
     const positionValueNative = data.price * qty;
-    
-    // Positionswert in EUR für Gewichtung berechnen
     let positionValueEUR = positionValueNative;
     if (data.currency === 'USD') {
         positionValueEUR = positionValueNative / eurUsdRate;
     }
-
     const weightPercent = totalPortfolioValueEUR > 0 ? (positionValueEUR / totalPortfolioValueEUR) * 100 : 0;
 
     return `
@@ -77,7 +78,11 @@ export function createStockCardHTML(data, qty, totalPortfolioValueEUR, eurUsdRat
             <div class="p-5">
                 <div class="flex justify-between items-start mb-4 gap-4">
                     <div class="flex-grow min-w-0"> 
-                        <h3 class="text-lg font-bold text-slate-900 dark:text-white tracking-tight truncate" title="${data.name}">${data.name}</h3>
+                        <!-- VOLLER NAME (Hervorgehoben) -->
+                        <h3 class="text-lg font-bold text-slate-900 dark:text-white tracking-tight truncate" title="${data.name}">
+                            ${data.name}
+                        </h3>
+                        <!-- Symbol darunter -->
                         <div class="flex items-center gap-2 text-xs font-mono text-slate-500 mt-1">
                             <span class="font-bold text-slate-700 dark:text-slate-300">${data.symbol}</span>
                             <span class="bg-slate-100 dark:bg-slate-700 px-1.5 py-0.5 rounded">${data.currency}</span>
@@ -114,7 +119,6 @@ export function createStockCardHTML(data, qty, totalPortfolioValueEUR, eurUsdRat
     `;
 }
 
-// Badge Logik bleibt gleich
 const TYPE_BADGES = {
     'EQUITY': { label: 'AKTIE', color: 'bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200' },
     'ETF': { label: 'ETF', color: 'bg-purple-100 text-purple-800 dark:bg-purple-900 dark:text-purple-200' },

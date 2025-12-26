@@ -1,6 +1,6 @@
 /**
  * AlphaView Main Controller
- * Fixed: Portfolio Calculation & Currency Safety
+ * Fixed: Full Name in Modal
  */
 import { initTheme, toggleTheme } from './theme.js';
 import { fetchChartData, searchSymbol } from './api.js';
@@ -14,7 +14,7 @@ const state = {
     currentSymbol: null,
     currentRange: '1y',
     dashboardData: [],
-    eurUsdRate: 1.08 // Fallback Rate
+    eurUsdRate: 1.08 // Fallback
 };
 
 const rootEl = document.getElementById('app-root');
@@ -56,16 +56,13 @@ async function loadDashboard() {
     }
 
     try {
-        // 1. EXCHANGE RATE FETCH (Fehler-Tolerant)
-        // Wir versuchen den Kurs zu holen, wenn es schiefgeht, nehmen wir den Fallback
         let rateData = null;
         try {
             rateData = await fetchChartData('EURUSD=X', '5d', '1d');
         } catch (e) {
-            console.warn("Währungskurs konnte nicht geladen werden, nutze Fallback.", e);
+            console.warn("Währungskurs Fehler", e);
         }
 
-        // 2. STOCK DATA FETCH
         const stockPromises = watchlist.map(async (item) => {
             try {
                 const rawData = await fetchChartData(item.symbol, '1y', '1d');
@@ -76,25 +73,19 @@ async function loadDashboard() {
             } catch (e) { return null; }
         });
 
-        // Alles parallel ausführen
         const stockResults = await Promise.all(stockPromises);
         
-        // Rate verarbeiten
         if(rateData && rateData.indicators && rateData.indicators.quote[0].close) {
             const closes = rateData.indicators.quote[0].close;
-            // Nimm den letzten gültigen Wert
             const currentRate = closes.filter(c => c).pop();
             if(currentRate) state.eurUsdRate = currentRate;
         }
 
         state.dashboardData = stockResults.filter(r => r !== null);
-        
-        // WICHTIG: Rendern aufrufen!
         renderDashboardGrid();
 
     } catch (criticalError) {
-        console.error("Kritischer Fehler im Dashboard:", criticalError);
-        gridEl.innerHTML = '<div class="col-span-full text-center text-red-500">Fehler beim Laden. Bitte neu laden.</div>';
+        console.error("Dashboard Error:", criticalError);
     }
 }
 
@@ -104,31 +95,23 @@ function renderDashboardGrid() {
     const totalUsdEl = document.getElementById('total-balance-usd');
     const totalPosEl = document.getElementById('total-positions');
 
-    // Prüfen ob Elemente da sind (Sicherheit)
-    if (!totalEurEl || !totalUsdEl) {
-        console.warn("UI Elemente für Portfolio-Summary fehlen.");
-    }
+    if (!totalEurEl) return;
 
     let totalEUR = 0;
 
     state.dashboardData.forEach(item => {
         const rawValue = item.price * item.qty;
-        
-        // Währungsumrechnung
         if (item.currency === 'EUR') {
             totalEUR += rawValue;
         } else if (item.currency === 'USD') {
-            // Wenn Kurs 1.08 ist, dann sind 100 USD ca 92 EUR (100 / 1.08)
             totalEUR += (rawValue / state.eurUsdRate);
         } else {
-            // Fallback 1:1 für unbekannte Währungen
             totalEUR += rawValue;
         }
     });
 
     const totalUSD = totalEUR * state.eurUsdRate;
 
-    // UI Updates mit Sicherheitschecks
     if(totalEurEl) totalEurEl.textContent = formatMoney(totalEUR, 'EUR');
     if(totalUsdEl) totalUsdEl.textContent = formatMoney(totalUSD, 'USD');
     if(totalPosEl) totalPosEl.textContent = state.dashboardData.length;
@@ -223,7 +206,10 @@ async function loadChartForModal(symbol, requestedRange) {
                 const rawType = rawData.meta.instrumentType || 'EQUITY';
                 if(modalType) modalType.textContent = TYPE_TRANSLATIONS[rawType] || rawType;
                 
-                if(modalFullname) modalFullname.textContent = `${symbol} (${rawData.meta.currency})`; 
+                // --- UPDATE: Voller Name im Header ---
+                // Wir suchen den besten verfügbaren Namen
+                const fullName = rawData.meta.longName || rawData.meta.shortName || symbol;
+                if(modalFullname) modalFullname.textContent = fullName; 
             }
         }
     } catch (e) { console.error(e); if(modalFullname) modalFullname.textContent = "Fehler"; } 
@@ -247,24 +233,17 @@ function initSearch() {
 
     if(!input) return;
 
-    // Klick außerhalb schließt Dropdown
     document.addEventListener('click', (e) => {
-        if (!e.target.closest('#search-input') && !e.target.closest('#search-results')) {
-            resultsContainer.classList.add('hidden');
-        }
+        if (!e.target.closest('#search-input') && !e.target.closest('#search-results')) resultsContainer.classList.add('hidden');
     });
 
-    // 1. NEU: ENTER-TASTE LOGIK (Power User Add)
+    // ENTER TASTE (Power User)
     input.addEventListener('keydown', (e) => {
         if (e.key === 'Enter') {
             const val = input.value.trim().toUpperCase();
             if (val.length > 0) {
-                // Direktes Hinzufügen erzwingen
                 if(addSymbol(val)) {
-                    // Feedback
-                    console.log(`Symbol ${val} manuell hinzugefügt.`);
-                } else {
-                    alert(`${val} ist bereits auf der Watchlist.`);
+                    console.log(`Manuell hinzugefügt: ${val}`);
                 }
                 input.value = '';
                 resultsContainer.classList.add('hidden');
@@ -273,26 +252,15 @@ function initSearch() {
         }
     });
 
-    // 2. Normale Suche (Eingabe)
     input.addEventListener('input', (e) => {
         const query = e.target.value.trim();
         clearTimeout(state.searchDebounce);
-        
-        if (query.length < 2) { 
-            resultsContainer.classList.add('hidden'); 
-            return; 
-        }
-
+        if (query.length < 2) { resultsContainer.classList.add('hidden'); return; }
         spinner.classList.remove('hidden');
-
         state.searchDebounce = setTimeout(async () => {
             const results = await searchSymbol(query);
             spinner.classList.add('hidden');
-            
-            // Render results
             renderSearchResults(results, resultsContainer);
-
-            // Klick auf Ergebnis
             document.querySelectorAll('.search-item').forEach(item => {
                 item.addEventListener('click', () => {
                     addSymbol(item.dataset.symbol);
