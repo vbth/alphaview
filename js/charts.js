@@ -1,6 +1,7 @@
 /**
  * Charts Module
- * Fixed: ISO Week Calculation & Range Text Logic
+ * Renders interactive charts using Chart.js.
+ * Updated: ID Fix for Date Range Text
  */
 let chartInstance = null;
 
@@ -9,7 +10,6 @@ const formatCurrencyValue = (val, currency) => {
     return new Intl.NumberFormat(locale, { style: 'currency', currency: currency }).format(val);
 };
 
-// Korrekte ISO 8601 Kalenderwoche
 function getWeekNumber(date) {
     const d = new Date(Date.UTC(date.getFullYear(), date.getMonth(), date.getDate()));
     const dayNum = d.getUTCDay() || 7;
@@ -18,25 +18,23 @@ function getWeekNumber(date) {
     return Math.ceil((((d - yearStart) / 86400000) + 1) / 7);
 }
 
-// Berechnet Montag und Freitag basierend auf einem Datum
 function getWeekBounds(date) {
     const d = new Date(date);
-    const day = d.getDay() || 7; // Mo=1 ... So=7
-    if (day !== 1) d.setHours(-24 * (day - 1)); // Zurück zum Montag
-    
+    const day = d.getDay() || 7; 
+    if (day !== 1) d.setHours(-24 * (day - 1));
     const monday = new Date(d);
     const friday = new Date(d);
-    friday.setDate(monday.getDate() + 4); // +4 Tage = Freitag
-    
+    friday.setDate(monday.getDate() + 4);
     return { monday, friday };
 }
 
 function updateRangeInfo(labels, range) {
-    const el = document.getElementById('chart-date-range');
+    // WICHTIG: Hier muss die ID "dynamic-range-text" stehen, passend zum HTML
+    const el = document.getElementById('dynamic-range-text');
     if (!el || labels.length === 0) return;
 
     const start = labels[0];
-    const end = labels[labels.length - 1]; // Nehmen wir das Enddatum als Referenz für die KW
+    const end = labels[labels.length - 1];
     
     const fDate = (d) => d.toLocaleDateString('de-DE', { day: '2-digit', month: '2-digit', year: 'numeric' });
     const fMonthYear = (d) => d.toLocaleDateString('de-DE', { month: '2-digit', year: 'numeric' });
@@ -47,15 +45,11 @@ function updateRangeInfo(labels, range) {
 
     switch(range) {
         case '1d':
-            // "Handelstag: 22.12.2025 (Stand: 17:30)"
-            text = `Handelstag: ${fDate(end)} <span class="text-slate-400 ml-2 text-xs font-normal">(${fmtTime.format(end)})</span>`;
+            text = `Handelstag: ${fDate(end)} <span class="opacity-50 ml-1 font-normal">(${fmtTime.format(end)})</span>`;
             break;
         case '5d':
-            // Echte Kalenderwoche berechnen (Mo - Fr)
             const kw = getWeekNumber(end);
             const bounds = getWeekBounds(end);
-            
-            // Format: "KW 52 (22.12.2025 - 26.12.2025)"
             text = `KW ${kw} (${fDate(bounds.monday)} – ${fDate(bounds.friday)})`;
             break;
         case '1mo':
@@ -71,8 +65,7 @@ function updateRangeInfo(labels, range) {
             text = `${fYear(start)} – ${fYear(end)}`;
             break;
     }
-    // Icon davor setzen für Optik
-    el.innerHTML = `<i class="fa-regular fa-calendar-days mr-2 opacity-70"></i>${text}`;
+    el.innerHTML = text;
 }
 
 export function renderChart(canvasId, rawData, range = '1y') {
@@ -149,12 +142,8 @@ export function renderChart(canvasId, rawData, range = '1y') {
                         callback: function(val, index) {
                             const d = labels[index];
                             if (!d) return '';
-                            
                             if (range === '1d') return d.toLocaleTimeString('de-DE', { hour: '2-digit', minute:'2-digit' });
-                            
-                            // 1W -> Wochentag + Datum (z.B. Mo 22.12.)
                             if (range === '5d') return d.toLocaleDateString('de-DE', { weekday: 'short', day: '2-digit', month: '2-digit' });
-                            
                             return d.toLocaleDateString('de-DE', { day: '2-digit', month: '2-digit', year: '2-digit' });
                         }
                     }

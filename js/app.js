@@ -1,6 +1,6 @@
 /**
  * App Module
- * Coordinates Logic.
+ * Main Controller: Coordinates Logic, UI, and Events.
  */
 import { initTheme, toggleTheme } from './theme.js';
 import { fetchChartData, searchSymbol } from './api.js';
@@ -26,6 +26,7 @@ async function loadDashboard() {
     const gridEl = document.getElementById('dashboard-grid');
     const emptyStateEl = document.getElementById('empty-state');
     const summaryEl = document.getElementById('portfolio-summary');
+
     if (!gridEl) return;
     if (watchlist.length === 0) {
         gridEl.innerHTML = '';
@@ -35,10 +36,12 @@ async function loadDashboard() {
     }
     if(emptyStateEl) emptyStateEl.classList.add('hidden');
     if(summaryEl) summaryEl.classList.remove('hidden');
-    if(!gridEl.hasChildNodes()) gridEl.innerHTML = '<div class="col-span-full text-center text-slate-400 py-8 animate-pulse">Lade Kurse...</div>';
+    if(!gridEl.hasChildNodes()) gridEl.innerHTML = '<div class="col-span-full text-center text-slate-400 py-8 animate-pulse">Lade Kurse & Wechselkurse...</div>';
+
     try {
         let rateData = null;
         try { rateData = await fetchChartData('EURUSD=X', '5d', '1d'); } catch (e) {}
+        
         const stockPromises = watchlist.map(async (item) => {
             try {
                 const rawData = await fetchChartData(item.symbol, '1y', '1d');
@@ -48,12 +51,14 @@ async function loadDashboard() {
                 return analysis;
             } catch (e) { return null; }
         });
+
         const stockResults = await Promise.all(stockPromises);
         if(rateData && rateData.indicators && rateData.indicators.quote[0].close) {
             const closes = rateData.indicators.quote[0].close;
             const currentRate = closes.filter(c => c).pop();
             if(currentRate) state.eurUsdRate = currentRate;
         }
+
         state.dashboardData = stockResults.filter(r => r !== null);
         renderDashboardGrid();
     } catch (criticalError) { console.error("Dashboard Error:", criticalError); }
@@ -64,19 +69,25 @@ function renderDashboardGrid() {
     const totalEurEl = document.getElementById('total-balance-eur');
     const totalUsdEl = document.getElementById('total-balance-usd');
     const totalPosEl = document.getElementById('total-positions');
+
     if (!totalEurEl) return;
     let totalEUR = 0;
+
     state.dashboardData.forEach(item => {
         const rawValue = item.price * item.qty;
         if (item.currency === 'EUR') totalEUR += rawValue;
         else if (item.currency === 'USD') totalEUR += (rawValue / state.eurUsdRate);
         else totalEUR += rawValue;
     });
+
     const totalUSD = totalEUR * state.eurUsdRate;
     if(totalEurEl) totalEurEl.textContent = formatMoney(totalEUR, 'EUR');
     if(totalUsdEl) totalUsdEl.textContent = formatMoney(totalUSD, 'USD');
     if(totalPosEl) totalPosEl.textContent = state.dashboardData.length;
-    gridEl.innerHTML = state.dashboardData.map(data => createStockCardHTML(data, data.qty, totalEUR, state.eurUsdRate)).join('');
+
+    gridEl.innerHTML = state.dashboardData
+        .map(data => createStockCardHTML(data, data.qty, totalEUR, state.eurUsdRate))
+        .join('');
     attachDashboardEvents();
 }
 
@@ -84,7 +95,8 @@ function attachDashboardEvents() {
     document.querySelectorAll('.delete-btn').forEach(btn => {
         btn.addEventListener('click', (e) => {
             e.stopPropagation();
-            if(confirm(`${e.currentTarget.dataset.symbol} entfernen?`)) { removeSymbol(e.currentTarget.dataset.symbol); loadDashboard(); }
+            const sym = e.currentTarget.dataset.symbol;
+            if(confirm(`${sym} entfernen?`)) { removeSymbol(sym); loadDashboard(); }
         });
     });
     document.querySelectorAll('.stock-card').forEach(card => {
@@ -115,7 +127,8 @@ async function openModal(symbol) {
     modalSymbol.textContent = symbol;
     modalExchange.textContent = '...';
     modalType.textContent = '...';
-    // Reset range text
+    
+    // WICHTIG: Hier auch die ID "dynamic-range-text"
     const rangeText = document.getElementById('dynamic-range-text');
     if(rangeText) rangeText.textContent = 'Lade...';
     
