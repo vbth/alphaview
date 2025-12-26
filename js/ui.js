@@ -1,6 +1,7 @@
 /**
  * UI Module
- * Updates: Clean layout, Delete moved to footer, Volatility next to Trend.
+ * Generates HTML strings for Dashboard, Header, and Search.
+ * Updated: Portfolio Header left-aligned on mobile, right-aligned on desktop.
  */
 export const formatMoney = (val, currency) => {
     const locale = (currency === 'EUR') ? 'de-DE' : 'en-US';
@@ -12,13 +13,19 @@ const formatPercent = (val) => `${val >= 0 ? '+' : ''}${val.toFixed(2)}%`;
 export function renderAppSkeleton(container) {
     container.innerHTML = `
         <!-- PORTFOLIO HEADER -->
-        <div id="portfolio-summary" class="hidden mb-8 bg-white dark:bg-dark-surface rounded-xl p-6 shadow-sm border border-slate-200 dark:border-slate-700 flex flex-col md:flex-row justify-between items-center gap-4">
+        <!-- items-start für Mobile (linksbündig), md:items-center für Desktop -->
+        <div id="portfolio-summary" class="hidden mb-8 bg-white dark:bg-dark-surface rounded-xl p-6 shadow-sm border border-slate-200 dark:border-slate-700 flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+            
+            <!-- Balance Area -->
             <div>
                 <h2 class="text-sm font-medium text-slate-500 dark:text-slate-400 uppercase tracking-wider mb-2">Gesamtdepotwert</h2>
                 <div class="text-4xl font-bold text-slate-900 dark:text-white" id="total-balance-eur">---</div>
                 <div class="text-lg font-mono font-medium text-slate-500 dark:text-slate-400 mt-1" id="total-balance-usd">---</div>
             </div>
-            <div class="flex gap-8 text-right">
+            
+            <!-- Stats Area -->
+            <!-- text-left für Mobile, md:text-right für Desktop -->
+            <div class="flex gap-8 text-left md:text-right w-full md:w-auto">
                 <div>
                     <div class="text-xs text-slate-500">Positionen</div>
                     <div class="text-xl font-mono font-medium dark:text-slate-200" id="total-positions">0</div>
@@ -48,7 +55,7 @@ export function renderAppSkeleton(container) {
     `;
 }
 
-export function createStockCardHTML(data, qty, totalPortfolioValueEUR, eurUsdRate) {
+export function createStockCardHTML(data, qty, url, totalPortfolioValueEUR, eurUsdRate) {
     const isUp = data.change >= 0;
     const colorClass = isUp ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400';
     const trendIcon = data.trend === 'bullish' ? 'fa-arrow-trend-up' : (data.trend === 'bearish' ? 'fa-arrow-trend-down' : 'fa-minus');
@@ -56,53 +63,54 @@ export function createStockCardHTML(data, qty, totalPortfolioValueEUR, eurUsdRat
     let positionValueEUR = positionValueNative;
     if (data.currency === 'USD') positionValueEUR = positionValueNative / eurUsdRate;
     const weightPercent = totalPortfolioValueEUR > 0 ? (positionValueEUR / totalPortfolioValueEUR) * 100 : 0;
+    const safeUrl = url || '';
 
     return `
         <div class="stock-card group relative bg-white dark:bg-dark-surface rounded-xl shadow-sm border border-slate-200 dark:border-slate-700 hover:shadow-lg hover:border-primary/50 dark:hover:border-neon-accent/50 transition-all duration-300 cursor-pointer overflow-hidden" data-symbol="${data.symbol}">
             
+            <button class="delete-btn absolute top-0 right-0 p-4 text-slate-300 hover:text-red-500 transition-colors z-20" data-symbol="${data.symbol}" title="Entfernen">
+                <i class="fa-solid fa-times text-lg"></i>
+            </button>
+
             <div class="p-5">
-                <!-- Header: Clean Left Alignment -->
                 <div class="flex justify-between items-start mb-4 gap-4">
-                    <div class="flex-grow min-w-0"> 
+                    <div class="flex-grow min-w-0 pr-2"> 
                         <h3 class="text-lg font-bold text-slate-900 dark:text-white tracking-tight truncate" title="${data.name}">${data.name}</h3>
                         <div class="flex items-center gap-2 text-xs font-mono text-slate-500 mt-1"><span class="font-bold text-slate-700 dark:text-slate-300">${data.symbol}</span><span class="bg-slate-100 dark:bg-slate-700 px-1.5 py-0.5 rounded">${data.currency}</span></div>
                     </div>
-                    <div class="text-right whitespace-nowrap">
+                    <div class="text-right whitespace-nowrap pt-1 mr-8">
                         <div class="text-xl font-bold font-mono text-slate-900 dark:text-slate-100">${formatMoney(data.price, data.currency)}</div>
                         <div class="text-sm font-medium font-mono ${colorClass}">${formatPercent(data.changePercent)}</div>
                     </div>
                 </div>
 
-                <!-- Input -->
+                <!-- Input Area -->
                 <div class="bg-slate-50 dark:bg-slate-800/50 rounded-lg p-3 mb-4 border border-slate-100 dark:border-slate-700" onclick="event.stopPropagation()">
                     <div class="flex justify-between items-center mb-2">
                         <label class="text-xs text-slate-500 uppercase font-semibold">Menge</label>
                         <input type="number" min="0" step="any" class="qty-input w-24 text-right text-sm bg-white dark:bg-slate-700 border border-slate-200 dark:border-slate-600 rounded px-2 py-1 focus:ring-2 focus:ring-primary outline-none" value="${qty}" data-symbol="${data.symbol}" placeholder="0">
                     </div>
-                    <div class="flex justify-between items-center border-t border-slate-200 dark:border-slate-700 pt-2">
+                    
+                    <!-- URL Input -->
+                    <div class="flex items-center gap-2 mb-2 pb-2 border-b border-slate-200 dark:border-slate-700">
+                        <i class="fa-solid fa-link text-slate-400 text-xs"></i>
+                        <input type="text" class="url-input w-full text-xs bg-transparent border-none focus:ring-0 text-slate-600 dark:text-slate-400 placeholder-slate-400" 
+                               value="${safeUrl}" data-symbol="${data.symbol}" placeholder="Info-Link einfügen...">
+                        ${safeUrl ? `<a href="${safeUrl}" target="_blank" class="text-primary hover:text-blue-600" title="Link öffnen"><i class="fa-solid fa-external-link-alt"></i></a>` : ''}
+                    </div>
+
+                    <div class="flex justify-between items-center pt-1">
                         <div class="text-xs text-slate-500">Wert</div>
                         <div class="font-mono font-bold text-slate-900 dark:text-white">${formatMoney(positionValueNative, data.currency)}</div>
                     </div>
                     <div class="flex justify-between items-center mt-1"><div class="text-xs text-slate-500">Anteil</div><div class="text-xs font-mono text-slate-400">${weightPercent.toFixed(1)}%</div></div>
                 </div>
 
-                <!-- Footer: Trend/Vol Left | Delete Right -->
-                <div class="flex items-center justify-between text-xs text-slate-500 dark:text-slate-400 mt-4 border-t border-slate-50 dark:border-slate-800 pt-3">
-                    
-                    <!-- Left: Metrics -->
-                    <div class="flex items-center gap-3">
-                        <div class="flex items-center gap-1"><i class="fa-solid ${trendIcon}"></i> ${data.trend}</div>
-                        <span class="text-slate-300 dark:text-slate-600">•</span>
-                        <div>Vol: ${data.volatility.toFixed(1)}%</div>
-                    </div>
-
-                    <!-- Right: Delete Link -->
-                    <button class="delete-btn text-slate-400 hover:text-red-500 transition-colors flex items-center gap-1.5" data-symbol="${data.symbol}" title="Entfernen">
-                        <i class="fa-solid fa-trash-can"></i> Entfernen
-                    </button>
+                <div class="flex items-center justify-between text-xs text-slate-500 dark:text-slate-400">
+                    <div class="flex items-center gap-1"><i class="fa-solid ${trendIcon}"></i> ${data.trend}</div>
+                    <div>Vol: ${data.volatility.toFixed(1)}%</div>
                 </div>
             </div>
-            
             <div class="h-1 w-full ${isUp ? 'bg-green-500' : 'bg-red-500'}"></div>
         </div>
     `;
