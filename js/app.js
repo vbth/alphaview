@@ -1,7 +1,6 @@
 /**
  * App Module
- * Main Controller
- * Fixed: "undefined" in Copy List function
+ * Updated: Copy Format with En-Dash "–"
  */
 import { initTheme, toggleTheme } from './theme.js';
 import { fetchChartData, searchSymbol } from './api.js';
@@ -250,6 +249,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     const importInput = document.getElementById('import-input');
     const copyBtn = document.getElementById('copy-list-btn');
 
+    // COPY LIST BUTTON
     if(copyBtn) {
         copyBtn.addEventListener('click', () => {
             if(!state.dashboardData || state.dashboardData.length === 0) {
@@ -272,12 +272,11 @@ document.addEventListener('DOMContentLoaded', async () => {
 
             let text = "DEPOT ZUSAMMENSETZUNG:\n\n";
             items.forEach(i => {
-                // FIXED: Fallback values if data is missing
                 const safeName = i.name || i.symbol || "Unbekannt";
                 const safeType = i.type || 'EQUITY';
                 const typeName = TYPE_TRANSLATIONS[safeType] || safeType;
-                
-                text += `[${i.percent.toFixed(1)}%] ${safeName} (${i.symbol}) - ${typeName}\n`;
+                // HIER: Gedankenstrich statt Minus
+                text += `[${i.percent.toFixed(1)}%] ${safeName} (${i.symbol}) – ${typeName}\n`;
             });
 
             navigator.clipboard.writeText(text).then(() => {

@@ -1,6 +1,6 @@
 /**
  * Charts Module
- * Updates: Increased Axis Padding & Layout Spacing
+ * Updates: Logic to only show SMAs on daily+ charts.
  */
 let chartInstance = null;
 
@@ -96,7 +96,10 @@ export function renderChart(canvasId, rawData, range = '1y', analysisData = null
         order: 1
     }];
 
-    if (prices.length > 50) {
+    // SMA LINIEN (Nur bei sinnvollen Zeiträumen)
+    const isIntraday = (range === '1d' || range === '5d');
+    
+    if (!isIntraday && prices.length > 50) {
         datasets.push({
             label: 'SMA 50',
             data: calculateSMA_Array(prices, 50),
@@ -110,7 +113,7 @@ export function renderChart(canvasId, rawData, range = '1y', analysisData = null
         });
     }
 
-    if (prices.length > 200) {
+    if (!isIntraday && prices.length > 200) {
         datasets.push({
             label: 'SMA 200',
             data: calculateSMA_Array(prices, 200),
@@ -130,9 +133,7 @@ export function renderChart(canvasId, rawData, range = '1y', analysisData = null
         options: {
             responsive: true,
             maintainAspectRatio: false,
-            layout: {
-                padding: { top: 10, right: 10, left: 0, bottom: 0 } // Mehr Luft im Canvas
-            },
+            layout: { padding: { top: 10, right: 10, left: 0, bottom: 0 } },
             interaction: { mode: 'index', intersect: false },
             plugins: {
                 legend: { display: true, labels: { color: '#94a3b8', boxWidth: 10, font: { size: 10 } } }, 
@@ -158,9 +159,7 @@ export function renderChart(canvasId, rawData, range = '1y', analysisData = null
                 x: {
                     display: true, grid: { display: false },
                     ticks: {
-                        color: '#94a3b8', 
-                        padding: 10, // MEHR PLATZ X-ACHSE
-                        maxRotation: 0, autoSkip: true, maxTicksLimit: 6,
+                        color: '#94a3b8', padding: 10, maxRotation: 0, autoSkip: true, maxTicksLimit: 6,
                         callback: function(val, index) {
                             const d = labels[index];
                             if (!d) return '';
@@ -171,14 +170,8 @@ export function renderChart(canvasId, rawData, range = '1y', analysisData = null
                     }
                 },
                 y: { 
-                    display: true, 
-                    position: 'right', 
-                    grid: { color: 'rgba(200, 200, 200, 0.05)', borderDash: [5, 5] }, 
-                    ticks: { 
-                        color: '#94a3b8', 
-                        padding: 10, // MEHR PLATZ Y-ACHSE
-                        callback: function(value) { return formatCurrencyValue(value, currency); } 
-                    } 
+                    display: true, position: 'right', grid: { color: 'rgba(200, 200, 200, 0.05)', borderDash: [5, 5] }, 
+                    ticks: { color: '#94a3b8', padding: 10, callback: function(value) { return formatCurrencyValue(value, currency); } } 
                 }
             }
         }
