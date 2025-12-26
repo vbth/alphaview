@@ -1,3 +1,8 @@
+/**
+ * Analysis Module
+ * Calculates financial metrics (Volatility, SMA, Returns).
+ */
+
 export function analyze(chartResult) {
     const prices = extractPrices(chartResult);
     const meta = chartResult.meta;
@@ -17,13 +22,18 @@ export function analyze(chartResult) {
     if (currentPrice > sma50 && currentPrice > sma200) trend = 'bullish';
     if (currentPrice < sma50 && currentPrice < sma200) trend = 'bearish';
 
-    // Volatilität
     const returns = calculateDailyReturns(prices);
     const stdDev = calculateStdDev(returns);
     const volatility = stdDev * Math.sqrt(252) * 100;
 
+    // HIER: Versuche den vollen Namen zu finden
+    // Yahoo liefert oft 'shortName' (z.B. "Apple Inc.") oder 'longName'.
+    // Fallback ist das Symbol.
+    const fullName = meta.shortName || meta.longName || meta.symbol;
+
     return {
         symbol: meta.symbol,
+        name: fullName, // <--- NEU
         price: currentPrice,
         currency: meta.currency,
         change: change,
