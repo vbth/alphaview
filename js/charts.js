@@ -1,7 +1,7 @@
 /**
  * Charts Module
- * Engine: TradingView Lightweight Charts
- * Fix: Strict Data Sanitization (Sort & Dedup) to prevent crashes.
+ * Engine: TradingView Lightweight Charts v4.2.0
+ * Fix: Explicit window access & Object Validation
  */
 
 let chart = null;
@@ -17,13 +17,10 @@ const formatCurrencyValue = (val, currency) => {
 
 function calculateSMA_Data(sortedData, window) {
     let result = [];
-    // Wir iterieren über die bereinigten Daten
     for (let i = 0; i < sortedData.length; i++) {
         if (i < window - 1) continue;
         let sum = 0;
-        for (let j = 0; j < window; j++) {
-            sum += sortedData[i - j].value;
-        }
+        for (let j = 0; j < window; j++) sum += sortedData[i - j].value;
         result.push({ time: sortedData[i].time, value: sum / window });
     }
     return result;
@@ -67,9 +64,10 @@ export function renderChart(containerId, rawData, range = '1y', analysisData = n
     const container = document.getElementById(containerId);
     if (!container) return;
 
-    // Check library
+    // Retry Mechanism if Lib not ready
     if (!window.LightweightCharts) {
-        container.innerHTML = '<div class="text-red-500 p-4">Chart Library Error (CDN)</div>';
+        console.warn("Waiting for Chart Lib...");
+        setTimeout(() => renderChart(containerId, rawData, range, analysisData), 200);
         return;
     }
 
@@ -77,91 +75,97 @@ export function renderChart(containerId, rawData, range = '1y', analysisData = n
     const prices = rawData.indicators.quote[0].close;
     currentCurrency = rawData.meta.currency || 'USD';
 
-    // 1. DATA SANITIZATION (Critical for TradingView)
-    // Wir erstellen erst eine saubere Liste
-    let dirtyData = [];
+    // 1. DATA PREP
+    let cleanData = [];
+    const timeSet = new Set(); 
+
     for(let i=0; i<timestamps.length; i++) {
-        if(prices[i] !== null && prices[i] !== undefined && timestamps[i] !== null) {
-            dirtyData.push({ time: timestamps[i], value: prices[i] });
+        const t = timestamps[i];
+        const p = prices[i];
+        if(p !== null && p !== undefined && t !== null && t !== undefined) {
+            if(!timeSet.has(t)) {
+                timeSet.add(t);
+                cleanData.push({ time: t, value: p });
+            }
         }
     }
+    cleanData.sort((a, b) => a.time - b.time);
 
-    if(dirtyData.length === 0) {
+    if(cleanData.length === 0) {
         container.innerHTML = '<div class="text-slate-400 p-10 text-center">Keine Daten verfügbar</div>';
         return;
     }
 
-    // 2. SORTIEREN (Zwingend erforderlich!)
-    dirtyData.sort((a, b) => a.time - b.time);
+    updateRangeInfo(cleanData[0].time, cleanData[cleanData.length-1].time, range);
+    updatePerformance(cleanData[0].value, cleanData[cleanData.length-1].value);
 
-    // 3. DEDUPLIZIEREN (Keine doppelten Zeiten erlaubt)
-    const cleanData = [];
-    const timeSet = new Set();
-    
-    for (const item of dirtyData) {
-        if (!timeSet.has(item.time)) {
-            timeSet.add(item.time);
-            cleanData.push(item);
-        }
+    // 2. CLEANUP
+    if (chart) {
+        try { chart.remove(); } catch(e) {}
+        chart = null;
     }
-
-    // 4. UI UPDATES (Mit den sauberen Daten)
-    const firstPoint = cleanData[0];
-    const lastPoint = cleanData[cleanData.length - 1];
-    
-    updateRangeInfo(firstPoint.time, lastPoint.time, range);
-    updatePerformance(firstPoint.value, lastPoint.value);
-
-    // 5. CHART INIT
-    if (chart) { chart.remove(); chart = null; }
     container.innerHTML = '';
 
+    // 3. COLORS
     const isDark = document.documentElement.classList.contains('dark');
     const bg = 'transparent'; 
-    const gridColor = isDark ? 'rgba(30, 41, 59, 0.5)' : 'rgba(226, 232, 240, 0.5)';
+    const gridColor = isDark ? 'rgba(255, 255, 255, 0.05)' : 'rgba(0, 0, 0, 0.05)';
     const textColor = isDark ? '#94a3b8' : '#64748b';
     
-    const isBullish = lastPoint.value >= firstPoint.value;
+    const startPrice = cleanData[0].value;
+    const endPrice = cleanData[cleanData.length - 1].value;
+    const isBullish = endPrice >= startPrice;
     const mainColor = isBullish ? '#22c55e' : '#ef4444'; 
     const topColor = isBullish ? 'rgba(34, 197, 94, 0.4)' : 'rgba(239, 68, 68, 0.4)';
     const bottomColor = isBullish ? 'rgba(34, 197, 94, 0.0)' : 'rgba(239, 68, 68, 0.0)';
 
     try {
-        chart = LightweightCharts.createChart(container, {
+        // 4. CREATE CHART
+        chart = window.LightweightCharts.createChart(container, {
             width: container.clientWidth,
-            height: container.clientHeight || 400, // Fallback Height
-            layout: { background: { type: 'solid', color: bg }, textColor: textColor, fontFamily: 'Inter' },
-            grid: { vertLines: { color: gridColor, style: 2 }, horzLines: { color: gridColor, style: 2 } },
-            rightPriceScale: { borderVisible: false, scaleMargins: { top: 0.1, bottom: 0.1 } },
+            height: container.clientHeight || 400,
+            layout: { 
+                background: { type: 'solid', color: bg }, 
+                textColor: textColor, 
+                fontFamily: 'Inter, sans-serif' 
+            },
+            grid: { 
+                vertLines: { color: gridColor }, 
+                horzLines: { color: gridColor } 
+            },
+            rightPriceScale: { borderVisible: false, scaleMargins: { top: 0.2, bottom: 0.1 } },
             timeScale: { borderVisible: false, timeVisible: true, secondsVisible: false, fixLeftEdge: true, fixRightEdge: true },
             crosshair: { vertLine: { labelVisible: false } },
             handleScroll: { mouseWheel: false, pressedMouseMove: true, horzTouchDrag: true, vertTouchDrag: false },
-            handleScale: { axisPressedMouseMove: false, mouseWheel: false, pinch: true }, 
+            handleScale: { axisPressedMouseMove: false, mouseWheel: false, pinch: true },
         });
 
+        // 5. ADD SERIES
         areaSeries = chart.addAreaSeries({
-            lineColor: mainColor, topColor: topColor, bottomColor: bottomColor, lineWidth: 2,
+            lineColor: mainColor,
+            topColor: topColor,
+            bottomColor: bottomColor,
+            lineWidth: 2,
             priceFormat: { type: 'custom', formatter: price => formatCurrencyValue(price, currentCurrency) },
         });
-        
         areaSeries.setData(cleanData);
 
-        // 6. SMAs
+        // 6. ADD SMA LINES
         const isIntraday = (range === '1d' || range === '5d');
         if (!isIntraday && cleanData.length > 50) {
-            sma50Series = chart.addLineSeries({ color: '#3b82f6', lineWidth: 1, priceLineVisible: false, lastValueVisible: false, crosshairMarkerVisible: false });
+            sma50Series = chart.addLineSeries({ color: '#3b82f6', lineWidth: 1, priceLineVisible: false, crosshairMarkerVisible: false });
             sma50Series.setData(calculateSMA_Data(cleanData, 50));
         }
         if (!isIntraday && cleanData.length > 200) {
-            sma200Series = chart.addLineSeries({ color: '#f59e0b', lineWidth: 1, priceLineVisible: false, lastValueVisible: false, crosshairMarkerVisible: false });
+            sma200Series = chart.addLineSeries({ color: '#f59e0b', lineWidth: 1, priceLineVisible: false, crosshairMarkerVisible: false });
             sma200Series.setData(calculateSMA_Data(cleanData, 200));
         }
 
-        // 7. Resize Observer
+        // 7. RESIZE OBSERVER
         const resizeObserver = new ResizeObserver(entries => {
             if (entries.length === 0 || entries[0].target !== container) return;
             const newRect = entries[0].contentRect;
-            if(newRect.width > 0 && newRect.height > 0) {
+            if (newRect.width > 0 && newRect.height > 0) {
                 chart.applyOptions({ width: newRect.width, height: newRect.height });
             }
         });
@@ -170,7 +174,7 @@ export function renderChart(containerId, rawData, range = '1y', analysisData = n
         chart.timeScale().fitContent();
 
     } catch(err) {
-        console.error("TradingView Error:", err);
-        container.innerHTML = `<div class="text-red-400 p-10 text-center">Chart Error: ${err.message}</div>`;
+        console.error("Critical Chart Error:", err);
+        container.innerHTML = `<div class="text-red-400 p-10 text-center text-sm">Chart Error: ${err.message}</div>`;
     }
 }
