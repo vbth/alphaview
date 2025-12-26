@@ -1,7 +1,7 @@
 /**
  * App Module
  * Main Controller: Coordinates Logic, UI, and Events.
- * Updated: Export Filename Format (YYYY-MM-DD-Depot.json)
+ * Updated: Export Filename Format (alphaview_depot_backup_YYYY-MM-DD.json)
  */
 import { initTheme, toggleTheme } from './theme.js';
 import { fetchChartData, searchSymbol } from './api.js';
@@ -240,9 +240,10 @@ document.addEventListener('DOMContentLoaded', async () => {
             
             const a = document.createElement('a');
             a.href = url;
-            // UPDATE: Dateiname Format
+            
+            // UPDATE: Neuer Dateiname
             const dateStr = new Date().toISOString().slice(0,10);
-            a.download = `${dateStr}-Depot.json`;
+            a.download = `alphaview_depot_backup_${dateStr}.json`;
             
             document.body.appendChild(a);
             a.click();
