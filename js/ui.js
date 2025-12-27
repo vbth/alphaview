@@ -115,11 +115,10 @@ export function createStockCardHTML(data, qty, url, extraUrl, totalPortfolioValu
                     <div class="flex-grow min-w-0 pr-2"> 
                         <h3 class="text-lg font-bold text-slate-900 dark:text-white tracking-tight truncate" title="${data.name}">${data.name}</h3>
                         
-                        <!-- 2. NEUER HEADER MIT BADGE -->
+                        <!-- 2. NEUER HEADER MIT BADGE, OHNE WÄHRUNG -->
                         <div class="flex items-center gap-2 text-xs font-mono text-slate-500 mt-1">
                             <span class="${tStyle.color} px-1.5 py-0.5 rounded border text-[10px] font-bold tracking-wide">${tStyle.label}</span>
                             <span class="font-bold text-slate-700 dark:text-slate-300 ml-1">${data.symbol}</span>
-                            <span class="bg-slate-100 dark:bg-slate-800 px-1.5 py-0.5 rounded text-[10px]">${data.currency}</span>
                         </div>
                     </div>
                     <div class="text-right whitespace-nowrap pt-1 ml-auto">
@@ -127,36 +126,51 @@ export function createStockCardHTML(data, qty, url, extraUrl, totalPortfolioValu
                         <div class="text-sm font-medium font-mono ${colorClass}">${formatPercent(data.changePercent)}</div>
                     </div>
                 </div>
+
+                <!-- INFO-BOX -->
                 <div class="bg-slate-50 dark:bg-slate-800/50 rounded-lg p-3 mb-4 border border-slate-100 dark:border-slate-700" onclick="event.stopPropagation()">
+                    
+                    <!-- ZEILE 1: Kurswert (vorher Prozent) -->
                     <div class="flex justify-between items-center border-b border-slate-200 dark:border-slate-700 pb-2 mb-2">
                         <div class="flex items-center gap-2">
-                            <i class="fa-solid fa-chart-pie text-slate-400 text-xs"></i>
-                            <!-- 3. KEIN PLUS MEHR VOR DEM PROZENTWERT -->
-                            <div class="text-xs font-mono text-slate-500 dark:text-slate-300">${weightPercent.toFixed(2).replace('.', ',')}%</div>
+                            <i class="fa-solid fa-coins text-slate-400 text-xs"></i>
+                            <label class="text-xs text-slate-500">Kurswert</label>
                         </div>
                         <div class="font-mono font-bold text-slate-900 dark:text-white text-right">
                             ${formatMoney(positionValueNative, data.currency)}
                         </div>
                     </div>
+
+                    <!-- ZEILE 2: Stückzahl + Prozent Badge -->
                     <div class="flex justify-between items-center mb-2">
                         <div class="flex items-center gap-2">
                             <i class="fa-solid fa-layer-group text-slate-400 text-xs"></i>
-                            <!-- 4. MENGE -> STÜCKZAHL GEÄNDERT -->
+                            <!-- Textfarbe angepasst an URL-Style (slate-600/slate-400) -->
                             <label class="text-xs text-slate-600 dark:text-slate-400">Stückzahl</label>
+                            
+                            <!-- Prozent Badge direkt hinter Stückzahl -->
+                            <span class="ml-1 text-[10px] bg-slate-200 dark:bg-slate-700 text-slate-600 dark:text-slate-300 px-1.5 py-0.5 rounded font-mono">
+                                ${weightPercent.toFixed(2).replace('.', ',')}%
+                            </span>
                         </div>
                         <input type="number" min="0" step="any" class="qty-input w-24 text-right text-sm bg-white dark:bg-slate-700 border border-slate-200 dark:border-slate-600 rounded px-2 py-1 focus:ring-2 focus:ring-primary outline-none" value="${qty}" data-symbol="${data.symbol}" placeholder="0">
                     </div>
+
+                    <!-- ZEILE 3: Info Link -->
                     <div class="flex items-center gap-2 pt-1">
                         <i class="fa-solid fa-link text-slate-400 text-xs"></i>
                         <input type="text" class="url-input w-full text-xs bg-transparent border-none focus:ring-0 text-slate-600 dark:text-slate-400 placeholder-slate-400" value="${safeUrl}" data-symbol="${data.symbol}" placeholder="Info-Link einfügen">
                         ${safeUrl ? `<a href="${safeUrl}" target="_blank" class="text-primary hover:text-blue-600" title="Öffnen"><i class="fa-solid fa-external-link-alt text-xs"></i></a>` : ''}
                     </div>
+
+                    <!-- ZEILE 4: Extra Link -->
                     <div class="flex items-center gap-2 pt-1 mt-1 border-t border-slate-200 dark:border-slate-700">
                         <i class="fa-solid ${extraIcon} text-slate-400 text-xs w-4 text-center"></i>
                         <input type="text" class="extra-url-input w-full text-xs bg-transparent border-none focus:ring-0 text-slate-600 dark:text-slate-400 placeholder-slate-400" value="${safeExtraUrl}" data-symbol="${data.symbol}" placeholder="${extraPlaceholder}">
                         ${safeExtraUrl ? `<a href="${safeExtraUrl}" target="_blank" class="text-primary hover:text-blue-600" title="Details"><i class="fa-solid fa-external-link-alt text-xs"></i></a>` : ''}
                     </div>
                 </div>
+
                 <div class="flex items-center justify-between text-xs text-slate-500 dark:text-slate-400 mt-4 border-t border-slate-50 dark:border-slate-800 pt-3">
                     <div class="flex items-center gap-2">
                         <div class="flex items-center gap-1"><i class="fa-solid ${trendIcon}"></i> ${data.trend}</div>
