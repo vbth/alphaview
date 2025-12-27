@@ -1,7 +1,7 @@
 /**
  * App Module
  * Main Controller
- * Final Sync: Imports match exports, logic handles all fields.
+ * Fix: Moved Sort Event Listeners to Init to prevent stacking/glitching.
  */
 import { initTheme, toggleTheme } from './theme.js';
 import { fetchChartData, searchSymbol } from './api.js';
@@ -50,6 +50,7 @@ async function loadDashboard() {
             btn.classList.add('text-slate-500', 'dark:text-slate-400', 'hover:bg-slate-50', 'dark:hover:bg-slate-700');
             btn.classList.remove('bg-slate-100', 'dark:bg-slate-600', 'text-primary', 'dark:text-white');
         }
+        // Fix: Remove old listener approach, re-assign onclick is safe here
         btn.onclick = () => { state.currentDashboardRange = r; loadDashboard(); };
     });
 
@@ -82,16 +83,14 @@ async function loadDashboard() {
                 
                 const analysis = analyze(rawData);
                 analysis.qty = item.qty;
+                analysis.url = item.url;
                 
-                // AUTO LINK LOGIC
-                if (!item.url || item.url.trim() === '') {
+                if (!analysis.url) {
                     analysis.url = `https://finance.yahoo.com/quote/${item.symbol}`;
                     updateUrl(item.symbol, analysis.url);
-                } else {
-                    analysis.url = item.url;
                 }
 
-                if (!item.extraUrl || item.extraUrl.trim() === '') {
+                if (!item.extraUrl) {
                     if (analysis.type === 'ETF' || analysis.type === 'MUTUALFUND') {
                          analysis.extraUrl = `https://finance.yahoo.com/quote/${item.symbol}/holdings`;
                     } else {
@@ -136,6 +135,7 @@ function renderDashboardGrid() {
 
     const totalUSD = totalEUR * state.eurUsdRate;
     
+    // Sortierung anwenden
     preparedData.sort((a, b) => {
         let valA, valB;
         if (state.sortField === 'name') {
@@ -154,28 +154,21 @@ function renderDashboardGrid() {
     });
 
     updateSortUI(state.sortField, state.sortDirection);
+    
     if(totalEurEl) totalEurEl.textContent = formatMoney(totalEUR, 'EUR');
     if(totalUsdEl) totalUsdEl.textContent = formatMoney(totalUSD, 'USD');
     if(totalPosEl) totalPosEl.textContent = state.dashboardData.length;
     
-    // RENDER: Mit Extra URL
     gridEl.innerHTML = preparedData.map(data => 
         createStockCardHTML(data, data.qty, data.url, data.extraUrl, totalEUR, state.eurUsdRate)
     ).join('');
     
-    attachDashboardEvents();
+    // Nur DIESE Events müssen bei jedem Render neu gebunden werden, da die Elemente neu sind
+    attachCardEvents(); 
 }
 
-function attachDashboardEvents() {
-    document.querySelectorAll('.sort-btn').forEach(btn => {
-        btn.addEventListener('click', () => {
-            const field = btn.dataset.sort;
-            if (state.sortField === field) state.sortDirection = state.sortDirection === 'asc' ? 'desc' : 'asc';
-            else { state.sortField = field; state.sortDirection = (field === 'name') ? 'asc' : 'desc'; }
-            renderDashboardGrid();
-        });
-    });
-
+function attachCardEvents() {
+    // Buttons IN DEN KARTEN (müssen neu gebunden werden)
     document.querySelectorAll('.delete-btn').forEach(btn => {
         btn.addEventListener('click', (e) => {
             e.stopPropagation();
@@ -200,7 +193,6 @@ function attachDashboardEvents() {
         });
         input.addEventListener('click', (e) => e.stopPropagation());
     });
-    // URL 1
     document.querySelectorAll('.url-input').forEach(input => {
         input.addEventListener('change', (e) => {
             const sym = e.target.dataset.symbol;
@@ -212,7 +204,6 @@ function attachDashboardEvents() {
         });
         input.addEventListener('click', (e) => e.stopPropagation());
     });
-    // URL 2 (Extra)
     document.querySelectorAll('.extra-url-input').forEach(input => {
         input.addEventListener('change', (e) => {
             const sym = e.target.dataset.symbol;
@@ -226,7 +217,7 @@ function attachDashboardEvents() {
     });
 }
 
-// ... (Modal logic, Chart Loading, Search, Export/Import unchanged)
+// ... Modal & Chart (unverändert) ...
 async function openModal(symbol) {
     if(!modal) return;
     state.currentSymbol = symbol;
@@ -297,6 +288,7 @@ async function loadChartForModal(symbol, requestedRange) {
     } catch (e) { console.error(e); if(modalFullname) modalFullname.textContent = "Fehler"; } 
     finally { if(canvas) canvas.style.opacity = '1'; }
 }
+
 rangeBtns.forEach(btn => {
     btn.addEventListener('click', () => {
         if(!state.currentSymbol) return;
@@ -306,6 +298,7 @@ rangeBtns.forEach(btn => {
         loadChartForModal(state.currentSymbol, range);
     });
 });
+
 function initSearch() {
     const input = document.getElementById('search-input');
     const resultsContainer = document.getElementById('search-results');
@@ -344,6 +337,8 @@ function initSearch() {
     });
 }
 document.addEventListener('keydown', (e) => { if (e.key === 'Escape') closeModal(); });
+
+// APP START
 document.addEventListener('DOMContentLoaded', async () => {
     const currentTheme = initTheme();
     const updateIcon = (mode) => { const icon = themeBtn?.querySelector('i'); if(icon) { if (mode === 'dark') { icon.classList.remove('fa-moon'); icon.classList.add('fa-sun'); } else { icon.classList.remove('fa-sun'); icon.classList.add('fa-moon'); } } };
@@ -354,11 +349,25 @@ document.addEventListener('DOMContentLoaded', async () => {
     if(modal) modal.addEventListener('click', (e) => { if(e.target === modal) closeModal(); });
     initSearch();
     loadDashboard();
+
+    // Export/Import
     const exportBtn = document.getElementById('export-btn');
     const importBtn = document.getElementById('import-btn');
     const importInput = document.getElementById('import-input');
     const copyBtn = document.getElementById('copy-list-btn');
     const copyUrlsBtn = document.getElementById('copy-urls-btn');
+    
+    // Sort Buttons Listener (EINMALIG HIER, NICHT IN RENDER LOOP)
+    document.querySelectorAll('.sort-btn').forEach(btn => {
+        btn.addEventListener('click', () => {
+            const field = btn.dataset.sort;
+            if (state.sortField === field) state.sortDirection = state.sortDirection === 'asc' ? 'desc' : 'asc';
+            else { state.sortField = field; state.sortDirection = (field === 'name') ? 'asc' : 'desc'; }
+            renderDashboardGrid();
+        });
+    });
+
+    // ... (Copy/Export Logic unchanged) ...
     if(copyBtn) {
         copyBtn.addEventListener('click', () => {
             if(!state.dashboardData || state.dashboardData.length === 0) { alert("Keine Daten."); return; }
@@ -386,6 +395,7 @@ document.addEventListener('DOMContentLoaded', async () => {
             }).catch(err => alert('Fehler beim Kopieren.'));
         });
     }
+
     if(copyUrlsBtn) {
         copyUrlsBtn.addEventListener('click', () => {
             if(!state.dashboardData || state.dashboardData.length === 0) { alert("Keine Daten."); return; }
@@ -404,6 +414,7 @@ document.addEventListener('DOMContentLoaded', async () => {
             });
         });
     }
+
     if(exportBtn) {
         exportBtn.addEventListener('click', () => {
             const data = localStorage.getItem('alphaview_portfolio');
@@ -420,6 +431,7 @@ document.addEventListener('DOMContentLoaded', async () => {
             URL.revokeObjectURL(url);
         });
     }
+
     if(importBtn && importInput) {
         importBtn.addEventListener('click', () => {
             if(localStorage.getItem('alphaview_portfolio') && localStorage.getItem('alphaview_portfolio') !== '[]') {
