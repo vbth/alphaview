@@ -48,7 +48,7 @@ export function renderAppSkeleton(container) {
                 <i class="fa-solid fa-magnifying-glass absolute left-4 top-3.5 text-slate-400"></i>
                 <div id="search-spinner" class="hidden absolute right-4 top-3.5"><i class="fa-solid fa-circle-notch fa-spin text-primary"></i></div>
             </div>
-            <p class="text-xs text-slate-400 dark:text-slate-500 mt-2 ml-1"><i class="fa-solid fa-circle-info mr-1"></i>Tipp: ETF nicht gefunden? Tippe das Kürzel (z.B. <code class="bg-slate-100 dark:bg-slate-700 px-1 rounded">EUNL.DE</code>) und drücke <strong>ENTER</strong>.</p>
+            <p class="text-xs text-slate-400 dark:text-slate-500 mt-2 ml-1"><i class="fa-solid fa-circle-info mr-1"></i>Tipp: Wertpapier nicht gefunden? Tippe das Kürzel (z.B. <code class="bg-slate-100 dark:bg-slate-700 px-1 rounded">EUNL.DE</code>) und drücke <strong>ENTER</strong>.</p>
             <div id="search-results" class="hidden absolute w-full bg-white dark:bg-slate-800 mt-2 rounded-lg shadow-xl border border-slate-200 dark:border-slate-700 z-50 overflow-hidden max-h-80 overflow-y-auto"></div>
         </div>
 
