@@ -1,6 +1,6 @@
 <!--
  * AlphaView Entry Point
- * Final Version: Unified Buttons, Clean UI
+ * Stable Version 99
 -->
 <!DOCTYPE html>
 <html lang="de" class="antialiased">
@@ -56,47 +56,37 @@
         <div class="fixed inset-0 z-10 overflow-y-auto">
             <div class="flex min-h-full items-end justify-center p-4 text-center sm:items-center sm:p-0">
                 <div class="relative transform overflow-hidden rounded-lg bg-white dark:bg-dark-surface text-left shadow-xl transition-all sm:my-8 sm:w-full sm:max-w-5xl border border-slate-200 dark:border-slate-700 flex flex-col">
-                    
                     <div class="absolute top-4 right-4 z-20">
                         <button type="button" id="close-modal" class="text-slate-400 hover:text-slate-500 focus:outline-none"><i class="fa-solid fa-xmark text-2xl"></i></button>
                     </div>
-
                     <div class="p-6">
                         <div class="flex flex-col gap-4 mb-4 pr-8">
                             <div>
                                 <h3 class="text-2xl font-bold text-slate-900 dark:text-white leading-tight break-words" id="modal-fullname">Lade Titel...</h3>
-                                
                                 <div class="flex flex-wrap gap-2 mt-3 text-xs font-mono text-slate-500 dark:text-slate-400 items-center">
                                     <span class="bg-slate-100 dark:bg-slate-800 px-2 py-1 rounded border border-slate-200 dark:border-slate-600">SYMBOL: <strong id="modal-symbol" class="text-slate-900 dark:text-slate-200">---</strong></span>
                                     <span class="bg-slate-100 dark:bg-slate-800 px-2 py-1 rounded border border-slate-200 dark:border-slate-600">BÖRSE: <strong id="modal-exchange" class="text-slate-900 dark:text-slate-200">---</strong></span>
                                     <span class="bg-slate-100 dark:bg-slate-800 px-2 py-1 rounded border border-slate-200 dark:border-slate-600">TYP: <strong id="modal-type" class="text-slate-900 dark:text-slate-200">---</strong></span>
-                                    <span class="bg-slate-100 dark:bg-slate-800 px-2 py-1 rounded border border-slate-200 dark:border-slate-600">ZEITRAUM: <strong id="dynamic-range-text" class="text-slate-900 dark:text-slate-200">...</strong></span>
+                                    <span class="bg-slate-100 dark:bg-slate-800 px-2 py-1 rounded border border-slate-200 dark:border-slate-600">ZEIT: <strong id="dynamic-range-text" class="text-slate-900 dark:text-slate-200">...</strong></span>
                                 </div>
-
                                 <div class="flex flex-wrap gap-2 mt-2 text-xs font-mono text-slate-500 dark:text-slate-400 items-center">
                                     <span class="bg-slate-100 dark:bg-slate-800 px-2 py-1 rounded border border-slate-200 dark:border-slate-600">PERFORMANCE: <strong id="chart-performance">...</strong></span>
                                     <span class="bg-slate-100 dark:bg-slate-800 px-2 py-1 rounded border border-slate-200 dark:border-slate-600">VOLATILITÄT: <strong id="modal-vol" class="text-slate-900 dark:text-slate-200">---</strong></span>
                                     <span class="bg-slate-100 dark:bg-slate-800 px-2 py-1 rounded border border-slate-200 dark:border-slate-600">TREND: <strong id="modal-trend" class="text-slate-900 dark:text-slate-200">---</strong></span>
                                 </div>
                             </div>
-                            
-                            <!-- MODAL CONTROLS (UNIFIED) -->
                             <div class="w-full overflow-x-auto no-scrollbar pb-1">
-                                <!-- Design-Update: Gleiche Klassen wie Dashboard (bg-white dark:bg-dark-surface border shadow-sm) -->
                                 <div class="flex bg-white dark:bg-dark-surface p-1 rounded-lg border border-slate-200 dark:border-slate-700 shadow-sm gap-1 min-w-max" id="chart-controls">
                                     <button data-range="1d" class="chart-range-btn px-4 py-1.5 text-xs font-bold rounded-md text-slate-500 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-700 transition-all">1T</button>
                                     <button data-range="1W" class="chart-range-btn px-4 py-1.5 text-xs font-bold rounded-md text-slate-500 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-700 transition-all">1W</button>
                                     <button data-range="1mo" class="chart-range-btn px-4 py-1.5 text-xs font-bold rounded-md text-slate-500 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-700 transition-all">1M</button>
                                     <button data-range="6mo" class="chart-range-btn px-4 py-1.5 text-xs font-bold rounded-md text-slate-500 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-700 transition-all">6M</button>
-                                    <!-- 1J ist hier aktiv -->
                                     <button data-range="1y" class="chart-range-btn px-4 py-1.5 text-xs font-bold rounded-md bg-slate-100 dark:bg-slate-600 text-primary dark:text-white transition-all">1J</button>
                                     <button data-range="5y" class="chart-range-btn px-4 py-1.5 text-xs font-bold rounded-md text-slate-500 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-700 transition-all">5J</button>
                                     <button data-range="max" class="chart-range-btn px-4 py-1.5 text-xs font-bold rounded-md text-slate-500 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-700 transition-all">MAX</button>
                                 </div>
                             </div>
                         </div>
-
-                        <!-- CHART CONTAINER -->
                         <div class="w-full h-[400px] sm:h-[500px] relative bg-transparent rounded-lg border border-slate-100 dark:border-slate-800 overflow-hidden" id="main-chart-container">
                             <div id="main-chart" class="w-full h-full"></div>
                         </div>
@@ -108,41 +98,19 @@
 
     <!-- FOOTER -->
     <footer class="bg-white dark:bg-dark-surface border-t border-slate-200 dark:border-slate-700 py-8 mt-auto">
-        <div class="max-w-7xl mx-auto px-4 flex flex-col items-center gap-6"> <!-- gap erhöht -->
-            
-            <!-- BUTTON GROUP: Mobile Column, Desktop Row -->
+        <div class="max-w-7xl mx-auto px-4 flex flex-col items-center gap-4">
             <div class="flex flex-col md:flex-row flex-wrap justify-center gap-3 w-full md:w-auto">
-                
-                <button id="copy-list-btn" class="w-full md:w-auto justify-center text-xs font-medium text-slate-600 dark:text-slate-300 hover:text-primary dark:hover:text-neon-accent transition-colors flex items-center gap-2 border border-slate-200 dark:border-slate-700 px-4 py-3 md:py-2 rounded-full hover:bg-slate-50 dark:hover:bg-slate-800 shadow-sm">
-                    <i class="fa-solid fa-list-ol"></i> Liste kopieren
-                </button>
-                
-                <button id="copy-urls-btn" class="w-full md:w-auto justify-center text-xs font-medium text-slate-600 dark:text-slate-300 hover:text-primary dark:hover:text-neon-accent transition-colors flex items-center gap-2 border border-slate-200 dark:border-slate-700 px-4 py-3 md:py-2 rounded-full hover:bg-slate-50 dark:hover:bg-slate-800 shadow-sm">
-                    <i class="fa-solid fa-link"></i> Links kopieren
-                </button>
-                
-                <button id="export-btn" class="w-full md:w-auto justify-center text-xs font-medium text-slate-500 hover:text-primary dark:hover:text-neon-accent transition-colors flex items-center gap-2 border border-slate-200 dark:border-slate-700 px-4 py-3 md:py-1.5 rounded-full hover:bg-slate-50 dark:hover:bg-slate-800">
-                    <i class="fa-solid fa-download"></i> Depot sichern
-                </button>
-                
-                <button id="import-btn" class="w-full md:w-auto justify-center text-xs font-medium text-slate-500 hover:text-primary dark:hover:text-neon-accent transition-colors flex items-center gap-2 border border-slate-200 dark:border-slate-700 px-4 py-3 md:py-1.5 rounded-full hover:bg-slate-50 dark:hover:bg-slate-800">
-                    <i class="fa-solid fa-upload"></i> Depot laden
-                </button>
-                
+                <button id="copy-list-btn" class="w-full md:w-auto justify-center text-xs font-medium text-slate-600 dark:text-slate-300 hover:text-primary dark:hover:text-neon-accent transition-colors flex items-center gap-2 border border-slate-200 dark:border-slate-700 px-4 py-3 md:py-2 rounded-full hover:bg-slate-50 dark:hover:bg-slate-800 shadow-sm"><i class="fa-solid fa-list-ol"></i> Liste kopieren</button>
+                <button id="copy-urls-btn" class="w-full md:w-auto justify-center text-xs font-medium text-slate-600 dark:text-slate-300 hover:text-primary dark:hover:text-neon-accent transition-colors flex items-center gap-2 border border-slate-200 dark:border-slate-700 px-4 py-3 md:py-2 rounded-full hover:bg-slate-50 dark:hover:bg-slate-800 shadow-sm"><i class="fa-solid fa-link"></i> Links kopieren</button>
+                <button id="export-btn" class="w-full md:w-auto justify-center text-xs font-medium text-slate-500 hover:text-primary dark:hover:text-neon-accent transition-colors flex items-center gap-2 border border-slate-200 dark:border-slate-700 px-4 py-3 md:py-1.5 rounded-full hover:bg-slate-50 dark:hover:bg-slate-800"><i class="fa-solid fa-download"></i> Depot sichern</button>
+                <button id="import-btn" class="w-full md:w-auto justify-center text-xs font-medium text-slate-500 hover:text-primary dark:hover:text-neon-accent transition-colors flex items-center gap-2 border border-slate-200 dark:border-slate-700 px-4 py-3 md:py-1.5 rounded-full hover:bg-slate-50 dark:hover:bg-slate-800"><i class="fa-solid fa-upload"></i> Depot laden</button>
                 <input type="file" id="import-input" class="hidden" accept=".json">
             </div>
-            
-            <div class="text-center text-xs text-slate-400 dark:text-slate-500">
-                <p>Local-First PWA running on GitHub Pages.</p>
-                <p class="mt-1">&copy; 2025 AlphaView Analytics.</p>
-            </div>
+            <div class="text-center text-xs text-slate-400 dark:text-slate-500"><p>Local-First PWA running on GitHub Pages.</p><p class="mt-1">&copy; 2025 AlphaView Analytics.</p></div>
         </div>
     </footer>
 
-    <!-- Stable TradingView Charts Library v4.2.0 -->
     <script src="https://cdn.jsdelivr.net/npm/lightweight-charts@4.2.0/dist/lightweight-charts.standalone.production.js"></script>
-    
-    <!-- APP LOGIC -->
-    <script type="module" src="js/app.js?v=103"></script->
+    <script type="module" src="js/app.js?v=Final99"></script>
 </body>
 </html>

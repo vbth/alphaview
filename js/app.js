@@ -1,7 +1,7 @@
 /**
  * App Module
  * Main Controller
- * Fixed: Aggressive Auto-Generation for News/Holdings Links
+ * Final Sync: Imports match exports, logic handles all fields.
  */
 import { initTheme, toggleTheme } from './theme.js';
 import { fetchChartData, searchSymbol } from './api.js';
@@ -83,10 +83,7 @@ async function loadDashboard() {
                 const analysis = analyze(rawData);
                 analysis.qty = item.qty;
                 
-                // --- AGGRESSIVE AUTO LINK GENERATOR ---
-                
-                // 1. Haupt-Link (Yahoo)
-                // Wenn im Store leer, generiere neu und speichere
+                // AUTO LINK LOGIC
                 if (!item.url || item.url.trim() === '') {
                     analysis.url = `https://finance.yahoo.com/quote/${item.symbol}`;
                     updateUrl(item.symbol, analysis.url);
@@ -94,17 +91,16 @@ async function loadDashboard() {
                     analysis.url = item.url;
                 }
 
-                // 2. Extra-Link (News/Holdings)
-                // Wenn im Store leer, generiere neu und speichere
                 if (!item.extraUrl || item.extraUrl.trim() === '') {
-                    const isFund = (analysis.type === 'ETF' || analysis.type === 'MUTUALFUND');
-                    const suffix = isFund ? 'holdings' : 'news';
-                    analysis.extraUrl = `https://finance.yahoo.com/quote/${item.symbol}/${suffix}`;
+                    if (analysis.type === 'ETF' || analysis.type === 'MUTUALFUND') {
+                         analysis.extraUrl = `https://finance.yahoo.com/quote/${item.symbol}/holdings`;
+                    } else {
+                         analysis.extraUrl = `https://finance.yahoo.com/quote/${item.symbol}/news`;
+                    }
                     updateExtraUrl(item.symbol, analysis.extraUrl);
                 } else {
                     analysis.extraUrl = item.extraUrl;
                 }
-                // --------------------------------------
 
                 return analysis;
             } catch (e) { return null; }
@@ -162,6 +158,7 @@ function renderDashboardGrid() {
     if(totalUsdEl) totalUsdEl.textContent = formatMoney(totalUSD, 'USD');
     if(totalPosEl) totalPosEl.textContent = state.dashboardData.length;
     
+    // RENDER: Mit Extra URL
     gridEl.innerHTML = preparedData.map(data => 
         createStockCardHTML(data, data.qty, data.url, data.extraUrl, totalEUR, state.eurUsdRate)
     ).join('');
@@ -203,6 +200,7 @@ function attachDashboardEvents() {
         });
         input.addEventListener('click', (e) => e.stopPropagation());
     });
+    // URL 1
     document.querySelectorAll('.url-input').forEach(input => {
         input.addEventListener('change', (e) => {
             const sym = e.target.dataset.symbol;
@@ -214,7 +212,7 @@ function attachDashboardEvents() {
         });
         input.addEventListener('click', (e) => e.stopPropagation());
     });
-    // HIER: Listener für das zweite URL Feld
+    // URL 2 (Extra)
     document.querySelectorAll('.extra-url-input').forEach(input => {
         input.addEventListener('change', (e) => {
             const sym = e.target.dataset.symbol;
@@ -228,7 +226,7 @@ function attachDashboardEvents() {
     });
 }
 
-// ... (Modal Logic & Chart Loading -> unchanged but included)
+// ... (Modal logic, Chart Loading, Search, Export/Import unchanged)
 async function openModal(symbol) {
     if(!modal) return;
     state.currentSymbol = symbol;
@@ -391,7 +389,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     if(copyUrlsBtn) {
         copyUrlsBtn.addEventListener('click', () => {
             if(!state.dashboardData || state.dashboardData.length === 0) { alert("Keine Daten."); return; }
-            let text = "WICHTIGE LINKS\n\n";
+            let text = "";
             const items = [...state.dashboardData].sort((a,b) => a.symbol.localeCompare(b.symbol));
             let count = 0;
             items.forEach(i => {

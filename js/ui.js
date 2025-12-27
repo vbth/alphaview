@@ -1,6 +1,6 @@
 /**
  * UI Module
- * Updates: Card Layout with 2 URL Inputs (Main & Extra)
+ * Final Version: Full Layout
  */
 export const formatMoney = (val, currency) => {
     const locale = (currency === 'EUR') ? 'de-DE' : 'en-US';
@@ -41,6 +41,7 @@ export function renderAppSkeleton(container) {
                 </div>
             </div>
         </div>
+
         <div class="mb-4 relative max-w-xl mx-auto">
             <div class="relative">
                 <input type="text" id="search-input" class="w-full bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-600 text-slate-900 dark:text-white rounded-lg pl-12 pr-4 py-3 shadow-sm focus:ring-2 focus:ring-primary outline-none" placeholder="Suche Name oder Symbol..." autocomplete="off">
@@ -50,6 +51,7 @@ export function renderAppSkeleton(container) {
             <p class="text-xs text-slate-400 dark:text-slate-500 mt-2 ml-1"><i class="fa-solid fa-circle-info mr-1"></i>Tipp: ETF nicht gefunden? Tippe das Kürzel (z.B. <code class="bg-slate-100 dark:bg-slate-700 px-1 rounded">EUNL.DE</code>) und drücke <strong>ENTER</strong>.</p>
             <div id="search-results" class="hidden absolute w-full bg-white dark:bg-slate-800 mt-2 rounded-lg shadow-xl border border-slate-200 dark:border-slate-700 z-50 overflow-hidden max-h-80 overflow-y-auto"></div>
         </div>
+
         <div class="mb-8 flex justify-center overflow-x-auto no-scrollbar py-2">
             <div class="flex bg-white dark:bg-dark-surface p-1 rounded-lg border border-slate-200 dark:border-slate-700 shadow-sm gap-0.5 items-center" id="dashboard-range-controls">
                 <button data-range="1d" class="dash-range-btn px-4 py-1.5 text-xs font-bold rounded-md bg-slate-100 dark:bg-slate-600 text-primary dark:text-white transition-all">1T</button>
@@ -83,11 +85,9 @@ export function createStockCardHTML(data, qty, url, extraUrl, totalPortfolioValu
     let positionValueEUR = positionValueNative;
     if (data.currency === 'USD') positionValueEUR = positionValueNative / eurUsdRate;
     const weightPercent = totalPortfolioValueEUR > 0 ? (positionValueEUR / totalPortfolioValueEUR) * 100 : 0;
-    
     const safeUrl = url || '';
     const safeExtraUrl = extraUrl || '';
 
-    // Icon & Placeholder Logic
     let extraIcon = 'fa-newspaper'; 
     let extraPlaceholder = 'News-Link...';
     if (data.type === 'ETF' || data.type === 'MUTUALFUND') {
@@ -125,21 +125,17 @@ export function createStockCardHTML(data, qty, url, extraUrl, totalPortfolioValu
                         </div>
                         <input type="number" min="0" step="any" class="qty-input w-24 text-right text-sm bg-white dark:bg-slate-700 border border-slate-200 dark:border-slate-600 rounded px-2 py-1 focus:ring-2 focus:ring-primary outline-none" value="${qty}" data-symbol="${data.symbol}" placeholder="0">
                     </div>
-                    
-                    <!-- Link 1 (Main) -->
-                    <div class="flex items-center gap-2 pt-1 border-t border-slate-200 dark:border-slate-700 mt-2">
-                        <i class="fa-solid fa-info-circle text-slate-400 text-xs w-4 text-center"></i>
-                        <input type="text" class="url-input w-full text-xs bg-transparent border-none focus:ring-0 text-slate-600 dark:text-slate-400 placeholder-slate-400" value="${safeUrl}" data-symbol="${data.symbol}" placeholder="Info-Link...">
+                    <div class="flex items-center gap-2 pt-1">
+                        <i class="fa-solid fa-link text-slate-400 text-xs"></i>
+                        <input type="text" class="url-input w-full text-xs bg-transparent border-none focus:ring-0 text-slate-600 dark:text-slate-400 placeholder-slate-400" value="${safeUrl}" data-symbol="${data.symbol}" placeholder="Info-Link einfügen">
                         ${safeUrl ? `<a href="${safeUrl}" target="_blank" class="text-primary hover:text-blue-600" title="Öffnen"><i class="fa-solid fa-external-link-alt text-xs"></i></a>` : ''}
                     </div>
-
-                    <!-- Link 2 (Extra) -->
-                    <div class="flex items-center gap-2 pt-1">
+                    <!-- Extra URL (NEU) -->
+                    <div class="flex items-center gap-2 pt-1 mt-1 border-t border-slate-200 dark:border-slate-700">
                         <i class="fa-solid ${extraIcon} text-slate-400 text-xs w-4 text-center"></i>
                         <input type="text" class="extra-url-input w-full text-xs bg-transparent border-none focus:ring-0 text-slate-600 dark:text-slate-400 placeholder-slate-400" value="${safeExtraUrl}" data-symbol="${data.symbol}" placeholder="${extraPlaceholder}">
                         ${safeExtraUrl ? `<a href="${safeExtraUrl}" target="_blank" class="text-primary hover:text-blue-600" title="Details"><i class="fa-solid fa-external-link-alt text-xs"></i></a>` : ''}
                     </div>
-
                 </div>
                 <div class="flex items-center justify-between text-xs text-slate-500 dark:text-slate-400 mt-4 border-t border-slate-50 dark:border-slate-800 pt-3">
                     <div class="flex items-center gap-2">
@@ -166,4 +162,17 @@ export function renderSearchResults(results, container) {
         return;
     }
     container.innerHTML = results.map(item => {
-        const badge = TYPE_BADGES[item.type] || { label: item.type, color: 'bg-slate-100 text-sl
+        const badge = TYPE_BADGES[item.type] || { label: item.type, color: 'bg-slate-100 text-slate-600' };
+        return `
+        <div class="search-item px-4 py-3 hover:bg-slate-50 dark:hover:bg-slate-700/50 cursor-pointer border-b border-slate-100 dark:border-slate-700 last:border-0 transition-colors group" data-symbol="${item.symbol}">
+            <div class="flex justify-between items-center">
+                <div class="flex-grow min-w-0 mr-4">
+                    <div class="flex items-center gap-2 mb-0.5"><span class="font-bold text-slate-900 dark:text-white text-sm whitespace-nowrap">${item.symbol}</span><span class="text-[10px] font-bold px-1.5 py-0.5 rounded ${badge.color}">${badge.label}</span></div>
+                    <div class="text-xs text-slate-500 truncate" title="${item.name}">${item.name}</div>
+                </div>
+                <div class="text-xs font-mono bg-slate-100 dark:bg-slate-700 text-slate-500 px-2 py-1 rounded whitespace-nowrap group-hover:bg-white dark:group-hover:bg-slate-600 transition-colors">${item.exchange}</div>
+            </div>
+        </div>
+    `}).join('');
+    container.classList.remove('hidden');
+}
