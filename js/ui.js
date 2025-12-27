@@ -142,7 +142,7 @@ export function createStockCardHTML(data, qty, url, extraUrl, totalPortfolioValu
                         <div class="flex items-center gap-2">
                             <i class="fa-solid fa-layer-group text-slate-400 text-xs"></i>
                             <!-- 4. MENGE -> STÜCKZAHL GEÄNDERT -->
-                            <label class="text-xs text-slate-500">Stückzahl</label>
+                            <label class="text-xs text-slate-600 dark:text-slate-400">Stückzahl</label>
                         </div>
                         <input type="number" min="0" step="any" class="qty-input w-24 text-right text-sm bg-white dark:bg-slate-700 border border-slate-200 dark:border-slate-600 rounded px-2 py-1 focus:ring-2 focus:ring-primary outline-none" value="${qty}" data-symbol="${data.symbol}" placeholder="0">
                     </div>
