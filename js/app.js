@@ -299,12 +299,23 @@ rangeBtns.forEach(btn => {
     });
 });
 
+// SUCHE: Angepasst für Header-Elemente
 function initSearch() {
-    const input = document.getElementById('search-input');
-    const resultsContainer = document.getElementById('search-results');
-    const spinner = document.getElementById('search-spinner');
+    // Neue IDs nutzen
+    const input = document.getElementById('header-search-input');
+    const resultsContainer = document.getElementById('header-search-results');
+    // Spinner ist im Header nicht nötig / zu wenig Platz, wir entfernen ihn logisch oder nutzen ein Icon
+    
     if(!input) return;
-    document.addEventListener('click', (e) => { if (!e.target.closest('#search-input') && !e.target.closest('#search-results')) resultsContainer.classList.add('hidden'); });
+
+    // Click outside handler
+    document.addEventListener('click', (e) => {
+        if (!e.target.closest('#header-search-input') && !e.target.closest('#header-search-results')) {
+            resultsContainer.classList.add('hidden');
+        }
+    });
+
+    // Enter Key
     input.addEventListener('keydown', (e) => {
         if (e.key === 'Enter') {
             const val = input.value.trim().toUpperCase();
@@ -316,15 +327,24 @@ function initSearch() {
             }
         }
     });
+
+    // Input Key
     input.addEventListener('input', (e) => {
         const query = e.target.value.trim();
         clearTimeout(state.searchDebounce);
-        if (query.length < 2) { resultsContainer.classList.add('hidden'); return; }
-        spinner.classList.remove('hidden');
+        
+        if (query.length < 2) { 
+            resultsContainer.classList.add('hidden'); 
+            return; 
+        }
+
+        // Suche starten
         state.searchDebounce = setTimeout(async () => {
             const results = await searchSymbol(query);
-            spinner.classList.add('hidden');
+            // Render (nutzt existierende Funktion aus ui.js)
             renderSearchResults(results, resultsContainer);
+            
+            // Klick-Event für Ergebnisse
             document.querySelectorAll('.search-item').forEach(item => {
                 item.addEventListener('click', () => {
                     addSymbol(item.dataset.symbol);
