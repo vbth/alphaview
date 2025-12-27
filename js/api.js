@@ -1,13 +1,14 @@
 /**
  * API Module
  * ==========
- * Kümmert sich um den Datenabruf via CORS Proxies.
- * FIX: Fallback für Fonds/Indizes, die keine Intraday-Daten haben.
+ * Datenabruf mit mehrstufigem Fallback für Fonds.
  */
 
+// Mehr Proxies für höhere Zuverlässigkeit
 const PROXIES = [
     'https://corsproxy.io/?',
-    'https://api.allorigins.win/raw?url='
+    'https://api.allorigins.win/raw?url=',
+    'https://api.codetabs.com/v1/proxy?quest='
 ];
 
 const BASE_URL_V8 = 'https://query1.finance.yahoo.com/v8/finance/chart';
@@ -18,8 +19,9 @@ async function fetchViaProxy(targetUrl) {
     for (const proxyBase of PROXIES) {
         try {
             const requestUrl = `${proxyBase}${encodeURIComponent(targetUrl)}`;
+            // Timeout etwas erhöht für langsame Fonds-Daten
             const controller = new AbortController();
-            const timeoutId = setTimeout(() => controller.abort(), 8000);
+            const timeoutId = setTimeout(() => controller.abort(), 10000);
 
             const response = await fetch(requestUrl, { signal: controller.signal });
             clearTimeout(timeoutId);
@@ -27,48 +29,47 @@ async function fetchViaProxy(targetUrl) {
             if (!response.ok) throw new Error(`Status ${response.status}`);
             
             const text = await response.text();
-            if(!text) throw new Error("Leere Antwort");
+            if(!text || text.trim().length === 0) throw new Error("Leere Antwort");
             
-            return JSON.parse(text);
+            try {
+                return JSON.parse(text);
+            } catch(e) {
+                throw new Error("Kein JSON");
+            }
         } catch (error) {
             lastError = error; 
         }
     }
-    throw lastError || new Error('Alle Proxies nicht erreichbar');
+    throw lastError || new Error('Alle Proxies fehlgeschlagen');
 }
 
 /**
- * Holt Chart-Daten.
- * Mit eingebautem Fallback: Wenn Intraday (z.B. 5m) fehlschlägt,
- * probieren wir es mit Daily (1d), da Fonds oft keine Intraday-Daten haben.
+ * Holt Chart-Daten mit aggressiverem Fallback für Fonds.
  */
 export async function fetchChartData(symbol, range = '1y', interval = '1d') {
-    // 1. Erster Versuch: Mit den gewünschten Parametern
     try {
-        const data = await tryFetch(symbol, range, interval);
-        return data;
+        // 1. Versuch: Exakt was angefordert wurde (z.B. 1d/5m)
+        return await tryFetch(symbol, range, interval);
     } catch (error) {
-        // 2. Fallback: Wenn wir Intraday wollten (z.B. 1d/5m), aber es fehlschlug,
-        // probieren wir es mit '5d' und '1d', um zumindest Tageskurse zu bekommen.
+        // Wenn kein Intraday (1d, 5d) möglich ist -> Fallback
         if (interval !== '1d' && interval !== '1wk' && interval !== '1mo') {
-            // console.log(`Fallback für ${symbol}: Versuche Daily-Daten...`);
             try {
-                // Wir nehmen '5d' als Range, damit wir sicher ein paar Kerzen für den Chart haben
+                // 2. Fallback: 5 Tage Daily (Standard-Fallback)
                 return await tryFetch(symbol, '5d', '1d'); 
             } catch (fallbackError) {
-                // console.error(`Auch Fallback gescheitert für ${symbol}`);
-                return null;
+                try {
+                    // 3. Notfall-Fallback: 1 Monat Daily (Fonds haben oft Datenlücken)
+                    return await tryFetch(symbol, '1mo', '1d');
+                } catch(finalErr) {
+                    console.error(`Alle Versuche gescheitert für ${symbol}`);
+                    return null;
+                }
             }
         }
-        
-        console.error(`Fehler beim Abruf von ${symbol}:`, error);
         return null;
     }
 }
 
-/**
- * Hilfsfunktion für den eigentlichen Request
- */
 async function tryFetch(symbol, range, interval) {
     const targetUrl = `${BASE_URL_V8}/${symbol}?interval=${interval}&range=${range}`;
     const data = await fetchViaProxy(targetUrl);
@@ -86,13 +87,12 @@ export async function searchSymbol(query) {
         const data = await fetchViaProxy(targetUrl);
         if (!data.quotes) return [];
         
-        // Wir lassen alle gängigen Typen zu
         return data.quotes
-            .filter(q => q.isYahooFinance && ['EQUITY', 'ETF', 'MUTUALFUND', 'INDEX', 'CRYPTOCURRENCY', 'CURRENCY', 'FUTURE', 'OPTION'].includes(q.quoteType))
+            .filter(q => q.isYahooFinance) // Filter gelockert, um mehr Fonds zu finden
             .map(q => ({
                 symbol: q.symbol,
-                name: q.shortname || q.longname,
-                type: q.quoteType,
+                name: q.shortname || q.longname || q.symbol,
+                type: q.quoteType || 'UNKNOWN',
                 exchange: q.exchange
             }));
     } catch (error) {
