@@ -1,6 +1,6 @@
 /**
  * UI Module
- * Updates: Separated Time Range and Sort Controls for better mobile UX.
+ * Final Layout: Unified Toolbar (Wrap), Search removed from Body.
  */
 export const formatMoney = (val, currency) => {
     const locale = (currency === 'EUR') ? 'de-DE' : 'en-US';
@@ -16,8 +16,10 @@ export function updateSortUI(activeField, direction) {
     document.querySelectorAll('.sort-btn').forEach(btn => {
         const icon = btn.querySelector('i');
         const field = btn.dataset.sort;
+        
         btn.className = 'sort-btn px-3 py-1.5 text-xs font-bold rounded-md text-slate-500 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-700 transition-all flex items-center gap-1 border border-slate-200 dark:border-slate-700 shadow-sm';
         icon.className = 'fa-solid fa-sort text-slate-300 ml-1 pointer-events-none';
+
         if (field === activeField) {
             btn.className = 'sort-btn px-3 py-1.5 text-xs font-bold rounded-md bg-slate-100 dark:bg-slate-600 text-primary dark:text-white transition-all flex items-center gap-1 border border-slate-200 dark:border-slate-700 shadow-sm';
             if (direction === 'asc') icon.className = 'fa-solid fa-arrow-up-long ml-1 pointer-events-none';
@@ -28,6 +30,7 @@ export function updateSortUI(activeField, direction) {
 
 export function renderAppSkeleton(container) {
     container.innerHTML = `
+        <!-- HEADER STATS -->
         <div id="portfolio-summary" class="hidden mb-8 bg-white dark:bg-dark-surface rounded-xl p-6 shadow-sm border border-slate-200 dark:border-slate-700 flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
             <div>
                 <h2 class="text-sm font-medium text-slate-500 dark:text-slate-400 uppercase tracking-wider mb-2">Gesamtdepotwert</h2>
@@ -42,44 +45,29 @@ export function renderAppSkeleton(container) {
             </div>
         </div>
 
-        <div class="mb-4 relative max-w-xl mx-auto">
-            <div class="relative">
-                <input type="text" id="search-input" class="w-full bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-600 text-slate-900 dark:text-white rounded-lg pl-12 pr-4 py-3 shadow-sm focus:ring-2 focus:ring-primary outline-none" placeholder="Suche Name oder Symbol..." autocomplete="off">
-                <i class="fa-solid fa-magnifying-glass absolute left-4 top-3.5 text-slate-400"></i>
-                <div id="search-spinner" class="hidden absolute right-4 top-3.5"><i class="fa-solid fa-circle-notch fa-spin text-primary"></i></div>
-            </div>
-            <p class="text-xs text-slate-400 dark:text-slate-500 mt-2 ml-1"><i class="fa-solid fa-circle-info mr-1"></i>Tipp: ETF nicht gefunden? Tippe das Kürzel (z.B. <code class="bg-slate-100 dark:bg-slate-700 px-1 rounded">EUNL.DE</code>) und drücke <strong>ENTER</strong>.</p>
-            <div id="search-results" class="hidden absolute w-full bg-white dark:bg-slate-800 mt-2 rounded-lg shadow-xl border border-slate-200 dark:border-slate-700 z-50 overflow-hidden max-h-80 overflow-y-auto"></div>
-        </div>
+        <!-- UNIFIED TOOLBAR (Wrap on Mobile) -->
+        <div class="mb-8 flex justify-center">
+            <div class="flex flex-wrap justify-center bg-white dark:bg-dark-surface p-1 rounded-lg border border-slate-200 dark:border-slate-700 shadow-sm gap-1" id="dashboard-range-controls">
+                
+                <!-- TIME -->
+                <button data-range="1d" class="dash-range-btn px-3 py-1.5 text-xs font-bold rounded-md bg-slate-100 dark:bg-slate-600 text-primary dark:text-white transition-all">1T</button>
+                <button data-range="1W" class="dash-range-btn px-3 py-1.5 text-xs font-bold rounded-md text-slate-500 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-700 transition-all">1W</button>
+                <button data-range="1mo" class="dash-range-btn px-3 py-1.5 text-xs font-bold rounded-md text-slate-500 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-700 transition-all">1M</button>
+                <button data-range="6mo" class="dash-range-btn px-3 py-1.5 text-xs font-bold rounded-md text-slate-500 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-700 transition-all">6M</button>
+                <button data-range="1y" class="dash-range-btn px-3 py-1.5 text-xs font-bold rounded-md text-slate-500 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-700 transition-all">1J</button>
+                <button data-range="5y" class="dash-range-btn px-3 py-1.5 text-xs font-bold rounded-md text-slate-500 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-700 transition-all">5J</button>
+                <button data-range="max" class="dash-range-btn px-3 py-1.5 text-xs font-bold rounded-md text-slate-500 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-700 transition-all">MAX</button>
 
-        <!-- ZEILE 1: ZEITRAUM (Scrollbar) -->
-        <div class="mb-4 flex justify-center overflow-x-auto no-scrollbar py-1">
-            <div class="flex bg-white dark:bg-dark-surface p-1 rounded-lg border border-slate-200 dark:border-slate-700 shadow-sm gap-0.5 items-center min-w-max" id="dashboard-range-selector">
-                <button data-range="1d" class="dash-range-btn px-4 py-1.5 text-xs font-bold rounded-md bg-slate-100 dark:bg-slate-600 text-primary dark:text-white transition-all">1T</button>
-                <button data-range="1W" class="dash-range-btn px-4 py-1.5 text-xs font-bold rounded-md text-slate-500 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-700 transition-all">1W</button>
-                <button data-range="1mo" class="dash-range-btn px-4 py-1.5 text-xs font-bold rounded-md text-slate-500 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-700 transition-all">1M</button>
-                <button data-range="6mo" class="dash-range-btn px-4 py-1.5 text-xs font-bold rounded-md text-slate-500 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-700 transition-all">6M</button>
-                <button data-range="1y" class="dash-range-btn px-4 py-1.5 text-xs font-bold rounded-md text-slate-500 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-700 transition-all">1J</button>
-                <button data-range="5y" class="dash-range-btn px-4 py-1.5 text-xs font-bold rounded-md text-slate-500 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-700 transition-all">5J</button>
-                <button data-range="max" class="dash-range-btn px-4 py-1.5 text-xs font-bold rounded-md text-slate-500 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-700 transition-all">MAX</button>
-            </div>
-        </div>
+                <!-- DIVIDER -->
+                <div class="w-px h-6 bg-slate-200 dark:bg-slate-700 mx-1 hidden md:block"></div>
+                <div class="w-full h-px bg-slate-200 dark:bg-slate-700 my-1 md:hidden"></div> <!-- Mobile Divider -->
 
-        <!-- ZEILE 2: SORTIERUNG (Wrap) -->
-        <div class="mb-8 flex justify-center flex-wrap gap-2" id="dashboard-sort-controls">
-            <span class="text-xs text-slate-400 self-center mr-1 hidden sm:inline">Sortieren:</span>
-            <button class="sort-btn px-3 py-1.5 text-xs font-bold rounded-md text-slate-500 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-700 transition-all flex items-center gap-1 border border-slate-200 dark:border-slate-700 shadow-sm" data-sort="name">
-                Name <i class="fa-solid fa-sort text-slate-300 ml-1 pointer-events-none"></i>
-            </button>
-            <button class="sort-btn px-3 py-1.5 text-xs font-bold rounded-md text-slate-500 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-700 transition-all flex items-center gap-1 border border-slate-200 dark:border-slate-700 shadow-sm" data-sort="value">
-                Wert <i class="fa-solid fa-sort text-slate-300 ml-1 pointer-events-none"></i>
-            </button>
-            <button class="sort-btn px-3 py-1.5 text-xs font-bold rounded-md text-slate-500 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-700 transition-all flex items-center gap-1 border border-slate-200 dark:border-slate-700 shadow-sm" data-sort="percent">
-                Anteil <i class="fa-solid fa-sort text-slate-300 ml-1 pointer-events-none"></i>
-            </button>
-            <button class="sort-btn px-3 py-1.5 text-xs font-bold rounded-md text-slate-500 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-700 transition-all flex items-center gap-1 border border-slate-200 dark:border-slate-700 shadow-sm" data-sort="performance">
-                Perf <i class="fa-solid fa-sort text-slate-300 ml-1 pointer-events-none"></i>
-            </button>
+                <!-- SORT -->
+                <button class="sort-btn px-3 py-1.5 text-xs font-bold rounded-md text-slate-500 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-700 transition-all flex items-center gap-1" data-sort="name">Name <i class="fa-solid fa-sort text-slate-300 ml-1 pointer-events-none"></i></button>
+                <button class="sort-btn px-3 py-1.5 text-xs font-bold rounded-md text-slate-500 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-700 transition-all flex items-center gap-1" data-sort="value">Wert <i class="fa-solid fa-sort text-slate-300 ml-1 pointer-events-none"></i></button>
+                <button class="sort-btn px-3 py-1.5 text-xs font-bold rounded-md text-slate-500 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-700 transition-all flex items-center gap-1" data-sort="percent">Anteil <i class="fa-solid fa-sort text-slate-300 ml-1 pointer-events-none"></i></button>
+                <button class="sort-btn px-3 py-1.5 text-xs font-bold rounded-md text-slate-500 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-700 transition-all flex items-center gap-1" data-sort="performance">Perf <i class="fa-solid fa-sort text-slate-300 ml-1 pointer-events-none"></i></button>
+            </div>
         </div>
 
         <div id="dashboard-grid" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6"></div>
@@ -141,21 +129,16 @@ export function createStockCardHTML(data, qty, url, extraUrl, totalPortfolioValu
                         </div>
                         <input type="number" min="0" step="any" class="qty-input w-24 text-right text-sm bg-white dark:bg-slate-700 border border-slate-200 dark:border-slate-600 rounded px-2 py-1 focus:ring-2 focus:ring-primary outline-none" value="${qty}" data-symbol="${data.symbol}" placeholder="0">
                     </div>
-                    
-                    <!-- Link 1 (Main) -->
-                    <div class="flex items-center gap-2 pt-1 border-t border-slate-200 dark:border-slate-700 mt-2">
-                        <i class="fa-solid fa-info-circle text-slate-400 text-xs w-4 text-center"></i>
-                        <input type="text" class="url-input w-full text-xs bg-transparent border-none focus:ring-0 text-slate-600 dark:text-slate-400 placeholder-slate-400" value="${safeUrl}" data-symbol="${data.symbol}" placeholder="Info-Link...">
+                    <div class="flex items-center gap-2 pt-1">
+                        <i class="fa-solid fa-link text-slate-400 text-xs"></i>
+                        <input type="text" class="url-input w-full text-xs bg-transparent border-none focus:ring-0 text-slate-600 dark:text-slate-400 placeholder-slate-400" value="${safeUrl}" data-symbol="${data.symbol}" placeholder="Info-Link einfügen">
                         ${safeUrl ? `<a href="${safeUrl}" target="_blank" class="text-primary hover:text-blue-600" title="Öffnen"><i class="fa-solid fa-external-link-alt text-xs"></i></a>` : ''}
                     </div>
-
-                    <!-- Link 2 (Extra) -->
-                    <div class="flex items-center gap-2 pt-1">
+                    <div class="flex items-center gap-2 pt-1 mt-1 border-t border-slate-200 dark:border-slate-700">
                         <i class="fa-solid ${extraIcon} text-slate-400 text-xs w-4 text-center"></i>
                         <input type="text" class="extra-url-input w-full text-xs bg-transparent border-none focus:ring-0 text-slate-600 dark:text-slate-400 placeholder-slate-400" value="${safeExtraUrl}" data-symbol="${data.symbol}" placeholder="${extraPlaceholder}">
                         ${safeExtraUrl ? `<a href="${safeExtraUrl}" target="_blank" class="text-primary hover:text-blue-600" title="Details"><i class="fa-solid fa-external-link-alt text-xs"></i></a>` : ''}
                     </div>
-
                 </div>
                 <div class="flex items-center justify-between text-xs text-slate-500 dark:text-slate-400 mt-4 border-t border-slate-50 dark:border-slate-800 pt-3">
                     <div class="flex items-center gap-2">
