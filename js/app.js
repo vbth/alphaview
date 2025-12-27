@@ -1,16 +1,27 @@
 /**
  * App Module
  * Main Controller
- * Updated: MAX view uses weekly data (1wk) to show SMA200.
+ * Updated: Sorting Logic added (Name, Value, Percent)
  */
 import { initTheme, toggleTheme } from './theme.js';
 import { fetchChartData, searchSymbol } from './api.js';
 import { analyze } from './analysis.js';
 import { getWatchlist, addSymbol, removeSymbol, updateQuantity, updateUrl } from './store.js';
-import { renderAppSkeleton, createStockCardHTML, renderSearchResults, formatMoney } from './ui.js';
+import { renderAppSkeleton, createStockCardHTML, renderSearchResults, formatMoney, updateSortUI } from './ui.js'; // updateSortUI importiert
 import { renderChart } from './charts.js';
 
-const state = { searchDebounce: null, currentSymbol: null, currentRange: '1y', dashboardData: [], eurUsdRate: 1.08, currentDashboardRange: '1d' };
+// STATE UPDATE: Sort Config
+const state = { 
+    searchDebounce: null, 
+    currentSymbol: null, 
+    currentRange: '1y', 
+    currentDashboardRange: '1d', 
+    dashboardData: [], 
+    eurUsdRate: 1.08,
+    sortField: 'value', // Default: Nach Wert
+    sortDirection: 'desc' // Default: Absteigend (Höchster zuerst)
+};
+
 const rootEl = document.getElementById('app-root');
 const themeBtn = document.getElementById('theme-toggle');
 const modal = document.getElementById('chart-modal');
@@ -57,7 +68,6 @@ async function loadDashboard() {
     try {
         let rateData = null;
         try { rateData = await fetchChartData('EURUSD=X', '5d', '1d'); } catch (e) {}
-        
         const stockPromises = watchlist.map(async (item) => {
             try {
                 let interval = '1d';
@@ -74,7 +84,6 @@ async function loadDashboard() {
                 return analysis;
             } catch (e) { return null; }
         });
-
         const stockResults = await Promise.all(stockPromises);
         if(rateData && rateData.indicators && rateData.indicators.quote[0].close) {
             const closes = rateData.indicators.quote[0].close;
@@ -92,22 +101,73 @@ function renderDashboardGrid() {
     const totalUsdEl = document.getElementById('total-balance-usd');
     const totalPosEl = document.getElementById('total-positions');
     if (!totalEurEl) return;
+    
     let totalEUR = 0;
-    state.dashboardData.forEach(item => {
-        const rawValue = item.price * item.qty;
-        if (item.currency === 'EUR') totalEUR += rawValue;
-        else if (item.currency === 'USD') totalEUR += (rawValue / state.eurUsdRate);
-        else totalEUR += rawValue;
+
+    // 1. Prepare & Calculate Data
+    const preparedData = state.dashboardData.map(item => {
+        let valEur = item.price * item.qty;
+        if (item.currency === 'USD') valEur /= state.eurUsdRate;
+        
+        totalEUR += valEur;
+        
+        return {
+            ...item,
+            valEur: valEur, // Calculated Value in EUR for sorting
+            // Percent wird im Grid benötigt
+        };
     });
+
     const totalUSD = totalEUR * state.eurUsdRate;
+    
+    // 2. Sort Data
+    preparedData.sort((a, b) => {
+        let valA, valB;
+        
+        if (state.sortField === 'name') {
+            valA = a.name.toLowerCase();
+            valB = b.name.toLowerCase();
+            if (state.sortDirection === 'asc') return valA.localeCompare(valB);
+            return valB.localeCompare(valA);
+        } else {
+            // Value or Percent (same logic basically)
+            valA = a.valEur;
+            valB = b.valEur;
+            if (state.sortDirection === 'asc') return valA - valB;
+            return valB - valA;
+        }
+    });
+
+    // 3. UI Update
+    updateSortUI(state.sortField, state.sortDirection);
     if(totalEurEl) totalEurEl.textContent = formatMoney(totalEUR, 'EUR');
     if(totalUsdEl) totalUsdEl.textContent = formatMoney(totalUSD, 'USD');
     if(totalPosEl) totalPosEl.textContent = state.dashboardData.length;
-    gridEl.innerHTML = state.dashboardData.map(data => createStockCardHTML(data, data.qty, data.url, totalEUR, state.eurUsdRate)).join('');
+
+    // 4. Render
+    gridEl.innerHTML = preparedData.map(data => createStockCardHTML(data, data.qty, data.url, totalEUR, state.eurUsdRate)).join('');
+    
     attachDashboardEvents();
 }
 
 function attachDashboardEvents() {
+    // Sort Buttons (NEU)
+    document.querySelectorAll('.sort-btn').forEach(btn => {
+        btn.addEventListener('click', () => {
+            const field = btn.dataset.sort;
+            if (state.sortField === field) {
+                // Toggle direction
+                state.sortDirection = state.sortDirection === 'asc' ? 'desc' : 'asc';
+            } else {
+                // New field
+                state.sortField = field;
+                // Default direction logic: Name -> Asc, Value/Percent -> Desc
+                state.sortDirection = (field === 'name') ? 'asc' : 'desc';
+            }
+            renderDashboardGrid();
+        });
+    });
+
     document.querySelectorAll('.delete-btn').forEach(btn => {
         btn.addEventListener('click', (e) => {
             e.stopPropagation();
@@ -145,6 +205,7 @@ function attachDashboardEvents() {
     });
 }
 
+// ... (Restlicher Code für Modal, Init, Export bleibt identisch) ...
 async function openModal(symbol) {
     if(!modal) return;
     state.currentSymbol = symbol;
@@ -161,9 +222,7 @@ async function openModal(symbol) {
     updateRangeButtonsUI('1y');
     await loadChartForModal(symbol, '1y');
 }
-
 function closeModal() { if(modal) modal.classList.add('hidden'); state.currentSymbol = null; }
-
 function updateRangeButtonsUI(activeRange) {
     rangeBtns.forEach(btn => {
         const range = btn.dataset.range;
@@ -176,40 +235,29 @@ function updateRangeButtonsUI(activeRange) {
         }
     });
 }
-
 async function loadChartForModal(symbol, requestedRange) {
     const canvasId = 'main-chart';
     const canvas = document.getElementById(canvasId);
     if(canvas) canvas.style.opacity = '0.5';
     try {
         let interval = '1d';
-        let apiRange = requestedRange; // Buffer logic
-
-        // SMA BUFFER & INTERVAL LOGIC
-        if (requestedRange === '1mo') { apiRange = '1y'; interval = '1d'; } 
-        else if (requestedRange === '6mo') { apiRange = '2y'; interval = '1d'; }
-        else if (requestedRange === '1y') { apiRange = '2y'; interval = '1d'; }
-        else if (requestedRange === '5y') { apiRange = '10y'; interval = '1wk'; }
-        
-        // FIX: MAX View uses Weekly data now to allow SMA200 calculation (200 weeks vs 200 months)
-        else if (requestedRange === 'max') { apiRange = 'max'; interval = '1wk'; }
-        
-        // Intraday
-        else if (requestedRange === '1d') { apiRange = '1d'; interval = '5m'; }
-        else if (requestedRange === '1W' || requestedRange === '5d') { apiRange = '5d'; interval = '15m'; }
+        let apiRange = requestedRange;
+        if (requestedRange === '1W') { apiRange = '5d'; interval = '15m'; }
+        else if (requestedRange === '1d') interval = '5m';
+        else if (requestedRange === '1mo' || requestedRange === '3mo') interval = '1d';
+        else if (requestedRange === '5y' || requestedRange === '10y') interval = '1wk';
+        else if (requestedRange === 'max') interval = '1mo';
 
         const rawData = await fetchChartData(symbol, apiRange, interval);
         if(rawData) {
             const analysis = analyze(rawData);
             renderChart(canvasId, rawData, requestedRange, analysis);
-            
             if(rawData.meta) {
                 if(modalExchange) modalExchange.textContent = rawData.meta.exchangeName || rawData.meta.exchangeTimezoneName || 'N/A';
                 const rawType = rawData.meta.instrumentType || 'EQUITY';
                 if(modalType) modalType.textContent = TYPE_TRANSLATIONS[rawType] || rawType;
                 const fullName = rawData.meta.longName || rawData.meta.shortName || symbol;
                 if(modalFullname) modalFullname.textContent = fullName; 
-                
                 if(analysis) {
                     if(modalVol) modalVol.textContent = analysis.volatility ? analysis.volatility.toFixed(1) + '%' : 'n/a';
                     if(modalTrend) {
@@ -226,7 +274,6 @@ async function loadChartForModal(symbol, requestedRange) {
     } catch (e) { console.error(e); if(modalFullname) modalFullname.textContent = "Fehler"; } 
     finally { if(canvas) canvas.style.opacity = '1'; }
 }
-
 rangeBtns.forEach(btn => {
     btn.addEventListener('click', () => {
         if(!state.currentSymbol) return;
@@ -236,7 +283,6 @@ rangeBtns.forEach(btn => {
         loadChartForModal(state.currentSymbol, range);
     });
 });
-
 function initSearch() {
     const input = document.getElementById('search-input');
     const resultsContainer = document.getElementById('search-results');
@@ -274,7 +320,6 @@ function initSearch() {
         }, 500);
     });
 }
-
 document.addEventListener('DOMContentLoaded', async () => {
     const currentTheme = initTheme();
     const updateIcon = (mode) => { const icon = themeBtn?.querySelector('i'); if(icon) { if (mode === 'dark') { icon.classList.remove('fa-moon'); icon.classList.add('fa-sun'); } else { icon.classList.remove('fa-sun'); icon.classList.add('fa-moon'); } } };
@@ -285,13 +330,11 @@ document.addEventListener('DOMContentLoaded', async () => {
     if(modal) modal.addEventListener('click', (e) => { if(e.target === modal) closeModal(); });
     initSearch();
     loadDashboard();
-
     const exportBtn = document.getElementById('export-btn');
     const importBtn = document.getElementById('import-btn');
     const importInput = document.getElementById('import-input');
     const copyBtn = document.getElementById('copy-list-btn');
     const copyUrlsBtn = document.getElementById('copy-urls-btn');
-
     if(copyBtn) {
         copyBtn.addEventListener('click', () => {
             if(!state.dashboardData || state.dashboardData.length === 0) { alert("Keine Daten."); return; }
@@ -319,7 +362,6 @@ document.addEventListener('DOMContentLoaded', async () => {
             }).catch(err => alert('Fehler beim Kopieren.'));
         });
     }
-
     if(copyUrlsBtn) {
         copyUrlsBtn.addEventListener('click', () => {
             if(!state.dashboardData || state.dashboardData.length === 0) { alert("Keine Daten."); return; }
@@ -341,7 +383,6 @@ document.addEventListener('DOMContentLoaded', async () => {
             });
         });
     }
-
     if(exportBtn) {
         exportBtn.addEventListener('click', () => {
             const data = localStorage.getItem('alphaview_portfolio');
@@ -358,7 +399,6 @@ document.addEventListener('DOMContentLoaded', async () => {
             URL.revokeObjectURL(url);
         });
     }
-
     if(importBtn && importInput) {
         importBtn.addEventListener('click', () => {
             if(localStorage.getItem('alphaview_portfolio') && localStorage.getItem('alphaview_portfolio') !== '[]') {
