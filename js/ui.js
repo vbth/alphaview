@@ -1,9 +1,7 @@
 /**
  * UI Module
- * Generates HTML strings for Dashboard, Header, and Search.
- * Updated: Two URL fields in Card (Main & Extra)
+ * Updates: Card Layout with 2 URL Inputs (Main & Extra)
  */
-
 export const formatMoney = (val, currency) => {
     const locale = (currency === 'EUR') ? 'de-DE' : 'en-US';
     return new Intl.NumberFormat(locale, { style: 'currency', currency: currency }).format(val);
@@ -14,7 +12,6 @@ const formatPercent = (val) => {
     return `${sign}${val.toFixed(2).replace('.', ',')}%`;
 };
 
-// ... updateSortUI ...
 export function updateSortUI(activeField, direction) {
     document.querySelectorAll('.sort-btn').forEach(btn => {
         const icon = btn.querySelector('i');
@@ -30,7 +27,6 @@ export function updateSortUI(activeField, direction) {
 }
 
 export function renderAppSkeleton(container) {
-    // ... (Skeleton unchanged) ...
     container.innerHTML = `
         <div id="portfolio-summary" class="hidden mb-8 bg-white dark:bg-dark-surface rounded-xl p-6 shadow-sm border border-slate-200 dark:border-slate-700 flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
             <div>
@@ -67,6 +63,7 @@ export function renderAppSkeleton(container) {
                 <button class="sort-btn px-3 py-1.5 text-xs font-bold rounded-md text-slate-500 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-700 transition-all flex items-center gap-1" data-sort="name">Name <i class="fa-solid fa-sort text-slate-300 ml-1"></i></button>
                 <button class="sort-btn px-3 py-1.5 text-xs font-bold rounded-md text-slate-500 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-700 transition-all flex items-center gap-1" data-sort="value">Wert <i class="fa-solid fa-sort text-slate-300 ml-1"></i></button>
                 <button class="sort-btn px-3 py-1.5 text-xs font-bold rounded-md text-slate-500 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-700 transition-all flex items-center gap-1" data-sort="percent">Anteil <i class="fa-solid fa-sort text-slate-300 ml-1"></i></button>
+                <button class="sort-btn px-3 py-1.5 text-xs font-bold rounded-md text-slate-500 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-700 transition-all flex items-center gap-1" data-sort="performance">Perf <i class="fa-solid fa-sort text-slate-300 ml-1"></i></button>
             </div>
         </div>
         <div id="dashboard-grid" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6"></div>
@@ -78,7 +75,6 @@ export function renderAppSkeleton(container) {
     `;
 }
 
-// createStockCardHTML with 2 URLs
 export function createStockCardHTML(data, qty, url, extraUrl, totalPortfolioValueEUR, eurUsdRate) {
     const isUp = data.change >= 0;
     const colorClass = isUp ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400';
@@ -92,9 +88,8 @@ export function createStockCardHTML(data, qty, url, extraUrl, totalPortfolioValu
     const safeExtraUrl = extraUrl || '';
 
     // Icon & Placeholder Logic
-    let extraIcon = 'fa-newspaper'; // Standard
+    let extraIcon = 'fa-newspaper'; 
     let extraPlaceholder = 'News-Link...';
-    
     if (data.type === 'ETF' || data.type === 'MUTUALFUND') {
         extraIcon = 'fa-list-check'; 
         extraPlaceholder = 'Holdings-Link...';
@@ -108,7 +103,7 @@ export function createStockCardHTML(data, qty, url, extraUrl, totalPortfolioValu
                         <h3 class="text-lg font-bold text-slate-900 dark:text-white tracking-tight truncate" title="${data.name}">${data.name}</h3>
                         <div class="flex items-center gap-2 text-xs font-mono text-slate-500 mt-1"><span class="font-bold text-slate-700 dark:text-slate-300">${data.symbol}</span><span class="bg-slate-100 dark:bg-slate-700 px-1.5 py-0.5 rounded">${data.currency}</span></div>
                     </div>
-                    <div class="text-right whitespace-nowrap pt-1 mr-auto">
+                    <div class="text-right whitespace-nowrap pt-1 ml-auto">
                         <div class="text-xl font-bold font-mono text-slate-900 dark:text-slate-100">${formatMoney(data.price, data.currency)}</div>
                         <div class="text-sm font-medium font-mono ${colorClass}">${formatPercent(data.changePercent)}</div>
                     </div>
@@ -171,17 +166,4 @@ export function renderSearchResults(results, container) {
         return;
     }
     container.innerHTML = results.map(item => {
-        const badge = TYPE_BADGES[item.type] || { label: item.type, color: 'bg-slate-100 text-slate-600' };
-        return `
-        <div class="search-item px-4 py-3 hover:bg-slate-50 dark:hover:bg-slate-700/50 cursor-pointer border-b border-slate-100 dark:border-slate-700 last:border-0 transition-colors group" data-symbol="${item.symbol}">
-            <div class="flex justify-between items-center">
-                <div class="flex-grow min-w-0 mr-4">
-                    <div class="flex items-center gap-2 mb-0.5"><span class="font-bold text-slate-900 dark:text-white text-sm whitespace-nowrap">${item.symbol}</span><span class="text-[10px] font-bold px-1.5 py-0.5 rounded ${badge.color}">${badge.label}</span></div>
-                    <div class="text-xs text-slate-500 truncate" title="${item.name}">${item.name}</div>
-                </div>
-                <div class="text-xs font-mono bg-slate-100 dark:bg-slate-700 text-slate-500 px-2 py-1 rounded whitespace-nowrap group-hover:bg-white dark:group-hover:bg-slate-600 transition-colors">${item.exchange}</div>
-            </div>
-        </div>
-    `}).join('');
-    container.classList.remove('hidden');
-}
+        const badge = TYPE_BADGES[item.type] || { label: item.type, color: 'bg-slate-100 text-sl
