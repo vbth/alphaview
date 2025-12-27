@@ -80,8 +80,17 @@ export function renderAppSkeleton(container) {
     `;
 }
 
-// ... createStockCardHTML & renderSearchResults unchanged ...
 export function createStockCardHTML(data, qty, url, extraUrl, totalPortfolioValueEUR, eurUsdRate) {
+    // 1. TYP MAPPING FÜR BADGES
+    const typeStyles = {
+        'EQUITY': { label: 'AKTIE', color: 'bg-blue-100 text-blue-800 dark:bg-blue-900/50 dark:text-blue-200 border-blue-200 dark:border-blue-800' },
+        'ETF': { label: 'ETF', color: 'bg-purple-100 text-purple-800 dark:bg-purple-900/50 dark:text-purple-200 border-purple-200 dark:border-purple-800' },
+        'MUTUALFUND': { label: 'FONDS', color: 'bg-orange-100 text-orange-800 dark:bg-orange-900/50 dark:text-orange-200 border-orange-200 dark:border-orange-800' },
+        'CRYPTOCURRENCY': { label: 'KRYPTO', color: 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/50 dark:text-yellow-200 border-yellow-200 dark:border-yellow-800' },
+        'INDEX': { label: 'INDEX', color: 'bg-slate-100 text-slate-800 dark:bg-slate-700 dark:text-slate-300 border-slate-200 dark:border-slate-600' }
+    };
+    const tStyle = typeStyles[data.type] || { label: data.type || 'OTHER', color: 'bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-400' };
+
     const isUp = data.change >= 0;
     const colorClass = isUp ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400';
     const trendIcon = data.trend === 'bullish' ? 'fa-arrow-trend-up' : (data.trend === 'bearish' ? 'fa-arrow-trend-down' : 'fa-minus');
@@ -105,7 +114,13 @@ export function createStockCardHTML(data, qty, url, extraUrl, totalPortfolioValu
                 <div class="flex justify-between items-start mb-4 gap-4">
                     <div class="flex-grow min-w-0 pr-2"> 
                         <h3 class="text-lg font-bold text-slate-900 dark:text-white tracking-tight truncate" title="${data.name}">${data.name}</h3>
-                        <div class="flex items-center gap-2 text-xs font-mono text-slate-500 mt-1"><span class="font-bold text-slate-700 dark:text-slate-300">${data.symbol}</span><span class="bg-slate-100 dark:bg-slate-700 px-1.5 py-0.5 rounded">${data.currency}</span></div>
+                        
+                        <!-- 2. NEUER HEADER MIT BADGE -->
+                        <div class="flex items-center gap-2 text-xs font-mono text-slate-500 mt-1">
+                            <span class="${tStyle.color} px-1.5 py-0.5 rounded border text-[10px] font-bold tracking-wide">${tStyle.label}</span>
+                            <span class="font-bold text-slate-700 dark:text-slate-300 ml-1">${data.symbol}</span>
+                            <span class="bg-slate-100 dark:bg-slate-800 px-1.5 py-0.5 rounded text-[10px]">${data.currency}</span>
+                        </div>
                     </div>
                     <div class="text-right whitespace-nowrap pt-1 ml-auto">
                         <div class="text-xl font-bold font-mono text-slate-900 dark:text-slate-100">${formatMoney(data.price, data.currency)}</div>
@@ -116,6 +131,7 @@ export function createStockCardHTML(data, qty, url, extraUrl, totalPortfolioValu
                     <div class="flex justify-between items-center border-b border-slate-200 dark:border-slate-700 pb-2 mb-2">
                         <div class="flex items-center gap-2">
                             <i class="fa-solid fa-chart-pie text-slate-400 text-xs"></i>
+                            <!-- 3. KEIN PLUS MEHR VOR DEM PROZENTWERT -->
                             <div class="text-xs font-mono text-slate-500 dark:text-slate-300">${weightPercent.toFixed(2).replace('.', ',')}%</div>
                         </div>
                         <div class="font-mono font-bold text-slate-900 dark:text-white text-right">
@@ -125,6 +141,7 @@ export function createStockCardHTML(data, qty, url, extraUrl, totalPortfolioValu
                     <div class="flex justify-between items-center mb-2">
                         <div class="flex items-center gap-2">
                             <i class="fa-solid fa-layer-group text-slate-400 text-xs"></i>
+                            <!-- 4. MENGE -> STÜCKZAHL GEÄNDERT -->
                             <label class="text-xs text-slate-500">Stückzahl</label>
                         </div>
                         <input type="number" min="0" step="any" class="qty-input w-24 text-right text-sm bg-white dark:bg-slate-700 border border-slate-200 dark:border-slate-600 rounded px-2 py-1 focus:ring-2 focus:ring-primary outline-none" value="${qty}" data-symbol="${data.symbol}" placeholder="0">
