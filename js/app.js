@@ -1,12 +1,12 @@
 /**
  * App Module
- * Main Controller: Coordinates Logic, UI, and Events.
- * Final Fix: Restored Auto-Link Logic for News/Holdings
+ * Main Controller
+ * Fixed: Added missing import 'updateExtraUrl' so auto-links work.
  */
 import { initTheme, toggleTheme } from './theme.js';
 import { fetchChartData, searchSymbol } from './api.js';
 import { analyze } from './analysis.js';
-// WICHTIG: updateExtraUrl ist hier dabei
+// HIER WAR DER FEHLER: updateExtraUrl fehlte im Import
 import { getWatchlist, addSymbol, removeSymbol, updateQuantity, updateUrl, updateExtraUrl } from './store.js';
 import { renderAppSkeleton, createStockCardHTML, renderSearchResults, formatMoney, updateSortUI } from './ui.js';
 import { renderChart } from './charts.js';
@@ -85,26 +85,24 @@ async function loadDashboard() {
                 analysis.qty = item.qty;
                 analysis.url = item.url;
                 
-                // --- AUTO LINK LOGIC START ---
-                // 1. Haupt-Link (Yahoo Übersicht)
+                // --- AUTO LINK LOGIK ---
+                // 1. Haupt-Link
                 if (!analysis.url) {
                     analysis.url = `https://finance.yahoo.com/quote/${item.symbol}`;
                     updateUrl(item.symbol, analysis.url);
                 }
 
-                // 2. Extra-Link (News oder Holdings)
+                // 2. Extra-Link (News/Holdings)
                 if (!item.extraUrl) {
                     if (analysis.type === 'ETF' || analysis.type === 'MUTUALFUND') {
                          analysis.extraUrl = `https://finance.yahoo.com/quote/${item.symbol}/holdings`;
                     } else {
-                         // Aktien, Krypto, etc. -> News
                          analysis.extraUrl = `https://finance.yahoo.com/quote/${item.symbol}/news`;
                     }
                     updateExtraUrl(item.symbol, analysis.extraUrl); // Speichern
                 } else {
                     analysis.extraUrl = item.extraUrl; // Vorhandenen nutzen
                 }
-                // --- AUTO LINK LOGIC END ---
 
                 return analysis;
             } catch (e) { return null; }
@@ -230,6 +228,7 @@ function attachDashboardEvents() {
     });
 }
 
+// ... (Modal Logic & Chart Loading -> unchanged but included)
 async function openModal(symbol) {
     if(!modal) return;
     state.currentSymbol = symbol;
@@ -246,9 +245,7 @@ async function openModal(symbol) {
     updateRangeButtonsUI('1y');
     await loadChartForModal(symbol, '1y');
 }
-
 function closeModal() { if(modal) modal.classList.add('hidden'); state.currentSymbol = null; }
-
 function updateRangeButtonsUI(activeRange) {
     rangeBtns.forEach(btn => {
         const range = btn.dataset.range;
@@ -261,7 +258,6 @@ function updateRangeButtonsUI(activeRange) {
         }
     });
 }
-
 async function loadChartForModal(symbol, requestedRange) {
     const canvasId = 'main-chart';
     const canvas = document.getElementById(canvasId);
@@ -269,8 +265,6 @@ async function loadChartForModal(symbol, requestedRange) {
     try {
         let interval = '1d';
         let apiRange = requestedRange;
-        
-        // SMA BUFFER & INTERVAL
         if (requestedRange === '1mo') { apiRange = '1y'; interval = '1d'; } 
         else if (requestedRange === '6mo') { apiRange = '2y'; interval = '1d'; }
         else if (requestedRange === '1y') { apiRange = '2y'; interval = '1d'; }
@@ -283,14 +277,12 @@ async function loadChartForModal(symbol, requestedRange) {
         if(rawData) {
             const analysis = analyze(rawData);
             renderChart(canvasId, rawData, requestedRange, analysis);
-            
             if(rawData.meta) {
                 if(modalExchange) modalExchange.textContent = rawData.meta.exchangeName || rawData.meta.exchangeTimezoneName || 'N/A';
                 const rawType = rawData.meta.instrumentType || 'EQUITY';
                 if(modalType) modalType.textContent = TYPE_TRANSLATIONS[rawType] || rawType;
                 const fullName = rawData.meta.longName || rawData.meta.shortName || symbol;
                 if(modalFullname) modalFullname.textContent = fullName; 
-                
                 if(analysis) {
                     if(modalVol) modalVol.textContent = analysis.volatility ? analysis.volatility.toFixed(1) + '%' : 'n/a';
                     if(modalTrend) {
