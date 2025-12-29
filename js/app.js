@@ -6,8 +6,9 @@ import { initTheme, toggleTheme } from './theme.js';
 import { fetchChartData, searchSymbol } from './api.js';
 import { analyze } from './analysis.js';
 import { getWatchlist, addSymbol, removeSymbol, updateQuantity, updateUrl, updateExtraUrl } from './store.js';
-import { renderAppSkeleton, createStockCardHTML, renderSearchResults, formatMoney, updateSortUI } from './ui.js';
+import { renderAppSkeleton, createStockCardHTML, createErrorCardHTML, renderSearchResults, formatMoney, updateSortUI } from './ui.js';
 import { renderChart } from './charts.js';
+import { ASSET_TYPES, DEFAULT_ASSET_STYLE } from './config.js';
 
 const state = {
     searchDebounce: null,
@@ -31,7 +32,6 @@ const modalTrend = document.getElementById('modal-trend');
 const modalVol = document.getElementById('modal-vol');
 const closeModalBtns = [document.getElementById('close-modal'), document.getElementById('close-modal-btn')];
 const rangeBtns = document.querySelectorAll('.chart-range-btn');
-const TYPE_TRANSLATIONS = { 'EQUITY': 'AKTIE', 'ETF': 'ETF', 'MUTUALFUND': 'FONDS', 'INDEX': 'INDEX', 'CRYPTOCURRENCY': 'KRYPTO', 'CURRENCY': 'DEVISEN', 'FUTURE': 'FUTURE', 'OPTION': 'OPTION' };
 
 // --- LIFECYCLE & CORE ---
 
@@ -111,7 +111,10 @@ async function fetchPortfolioData(watchlist, dashboardRange) {
                 }
 
                 return analysis;
-            } catch (e) { return null; }
+            } catch (e) {
+                console.warn(`Error fetching ${item.symbol}:`, e);
+                return { symbol: item.symbol, error: true, errorMsg: e.message };
+            }
         });
 
         const stockResults = await Promise.all(stockPromises);
@@ -122,7 +125,7 @@ async function fetchPortfolioData(watchlist, dashboardRange) {
             if (currentRate) state.eurUsdRate = currentRate;
         }
 
-        return stockResults.filter(r => r !== null);
+        return stockResults; // Return all, including errors
     } catch (e) {
         console.error("Fetch Data Error:", e);
         return [];
@@ -140,6 +143,8 @@ function renderDashboardGrid() {
 
     let totalEUR = 0;
     const preparedData = state.dashboardData.map(item => {
+        if (item.error) return item; // Skip calc for errors
+
         let valEur = item.price * item.qty;
         if (item.currency === 'USD') valEur /= state.eurUsdRate;
         totalEUR += valEur;
@@ -149,6 +154,11 @@ function renderDashboardGrid() {
     const totalUSD = totalEUR * state.eurUsdRate;
 
     preparedData.sort((a, b) => {
+        // Errors at the bottom
+        if (a.error && !b.error) return 1;
+        if (!a.error && b.error) return -1;
+        if (a.error && b.error) return 0;
+
         let valA, valB;
         if (state.sortField === 'name') {
             valA = a.name.toLowerCase(); valB = b.name.toLowerCase();
@@ -171,9 +181,10 @@ function renderDashboardGrid() {
     if (totalUsdEl) totalUsdEl.textContent = formatMoney(totalUSD, 'USD');
     if (totalPosEl) totalPosEl.textContent = state.dashboardData.length;
 
-    gridEl.innerHTML = preparedData.map(data =>
-        createStockCardHTML(data, data.qty, data.url, data.extraUrl, totalEUR, state.eurUsdRate)
-    ).join('');
+    gridEl.innerHTML = preparedData.map(data => {
+        if (data.error) return createErrorCardHTML(data.symbol, data.errorMsg);
+        return createStockCardHTML(data, data.qty, data.url, data.extraUrl, totalEUR, state.eurUsdRate);
+    }).join('');
 }
 
 function initDashboardEvents() {

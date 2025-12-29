@@ -2,6 +2,8 @@
  * UI Module
  * Final Layout: Unified Toolbar (Wrap), Search removed from Body.
  */
+import { ASSET_TYPES, DEFAULT_ASSET_STYLE } from './config.js';
+
 export const formatMoney = (val, currency) => {
     const locale = (currency === 'EUR') ? 'de-DE' : 'en-US';
     return new Intl.NumberFormat(locale, { style: 'currency', currency: currency }).format(val);
@@ -99,14 +101,13 @@ export function createStockCardHTML(data, qty, url, extraUrl, totalPortfolioValu
 }
 
 function renderCardHeader(data) {
-    const typeStyles = {
-        'EQUITY': { label: 'AKTIE', color: 'bg-blue-100 text-blue-800 dark:bg-blue-900/50 dark:text-blue-200 border-blue-200 dark:border-blue-800' },
-        'ETF': { label: 'ETF', color: 'bg-purple-100 text-purple-800 dark:bg-purple-900/50 dark:text-purple-200 border-purple-200 dark:border-purple-800' },
-        'MUTUALFUND': { label: 'FONDS', color: 'bg-orange-100 text-orange-800 dark:bg-orange-900/50 dark:text-orange-200 border-orange-200 dark:border-orange-800' },
-        'CRYPTOCURRENCY': { label: 'KRYPTO', color: 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/50 dark:text-yellow-200 border-yellow-200 dark:border-yellow-800' },
-        'INDEX': { label: 'INDEX', color: 'bg-slate-100 text-slate-800 dark:bg-slate-700 dark:text-slate-300 border-slate-200 dark:border-slate-600' }
+    const rawStyle = ASSET_TYPES[data.type] || DEFAULT_ASSET_STYLE;
+    // Allow fallback if label/color missing
+    const tStyle = {
+        label: rawStyle.label || data.type || 'OTHER',
+        color: rawStyle.color || DEFAULT_ASSET_STYLE.color
     };
-    const tStyle = typeStyles[data.type] || { label: data.type || 'OTHER', color: 'bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-400' };
+
     const colorClass = data.change >= 0 ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400';
 
     // MarketWatch Link für AI/Manual Research
@@ -197,7 +198,28 @@ function renderCardFooter(data, isUp) {
     `;
 }
 
-const TYPE_BADGES = { 'EQUITY': { label: 'AKTIE', color: 'bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200' }, 'ETF': { label: 'ETF', color: 'bg-purple-100 text-purple-800 dark:bg-purple-900 dark:text-purple-200' }, 'MUTUALFUND': { label: 'FONDS', color: 'bg-orange-100 text-orange-800 dark:bg-orange-900 dark:text-orange-200' }, 'CRYPTOCURRENCY': { label: 'KRYPTO', color: 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200' }, 'INDEX': { label: 'INDEX', color: 'bg-slate-100 text-slate-800 dark:bg-slate-700 dark:text-slate-200' } };
+export function createErrorCardHTML(symbol, msg) {
+    return `
+        <div class="stock-card relative bg-red-50 dark:bg-red-900/10 rounded-xl shadow-sm border border-red-200 dark:border-red-800 p-5 flex flex-col justify-between" data-symbol="${symbol}" style="min-height: 200px;">
+            <div>
+                <div class="flex justify-between items-start mb-2">
+                    <h3 class="text-lg font-bold text-red-700 dark:text-red-400 tracking-tight">${symbol}</h3>
+                    <i class="fa-solid fa-triangle-exclamation text-red-400"></i>
+                </div>
+                <p class="text-xs text-red-600 dark:text-red-300">Datenabruf fehlgeschlagen.</p>
+                <div class="text-[10px] font-mono mt-1 text-red-400 break-words">${msg || 'Timeout / Network Error'}</div>
+            </div>
+            <div class="mt-4 border-t border-red-100 dark:border-red-800/50 pt-3 flex justify-between items-end">
+                 <button class="delete-btn dashboard-action text-red-400 hover:text-red-600 transition-colors flex items-center gap-1.5 px-2 py-1 hover:bg-red-100 dark:hover:bg-red-900/30 rounded text-xs" data-symbol="${symbol}" data-action="delete">
+                    <i class="fa-solid fa-trash-can"></i> Entfernen
+                </button>
+                <a href="https://finance.yahoo.com/quote/${symbol}" target="_blank" class="text-red-400 hover:text-red-600 text-xs flex items-center gap-1">
+                    Check YF <i class="fa-solid fa-external-link-alt"></i>
+                </a>
+            </div>
+        </div>
+    `;
+}
 
 export function renderSearchResults(results, container) {
     if (results.length === 0) {
@@ -206,7 +228,12 @@ export function renderSearchResults(results, container) {
         return;
     }
     container.innerHTML = results.map(item => {
-        const badge = TYPE_BADGES[item.type] || { label: item.type, color: 'bg-slate-100 text-slate-600' };
+        const rawStyle = ASSET_TYPES[item.type] || DEFAULT_ASSET_STYLE;
+        const badge = {
+            label: rawStyle.label || item.type || 'OTHER',
+            color: rawStyle.color || DEFAULT_ASSET_STYLE.color
+        };
+
         return `
         <div class="search-item px-4 py-3 hover:bg-slate-50 dark:hover:bg-slate-700/50 cursor-pointer border-b border-slate-100 dark:border-slate-700 last:border-0 transition-colors group" data-symbol="${item.symbol}">
             <div class="flex justify-between items-center">
