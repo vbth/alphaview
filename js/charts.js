@@ -33,19 +33,19 @@ function updateRangeInfo(startTs, endTs, range) {
     try {
         const start = new Date(startTs * 1000);
         const end = new Date(endTs * 1000);
-        
+
         const fDate = (d) => d.toLocaleDateString('de-DE', { day: '2-digit', month: '2-digit', year: 'numeric' });
         const fMonthYear = (d) => d.toLocaleDateString('de-DE', { month: '2-digit', year: 'numeric' });
-        const fYear = (d) => d.getFullYear(); 
+        const fYear = (d) => d.getFullYear();
         const fmtTime = new Intl.DateTimeFormat('de-DE', { hour: '2-digit', minute: '2-digit' });
 
         let text = "";
         if (range === '1d') text = `${fDate(end)} <span class="opacity-50 ml-1 font-normal">(${fmtTime.format(end)})</span>`;
         else if (range === '5d' || range === '1W') text = `${fDate(start)} – ${fDate(end)}`;
-        else if (range === '1mo' || range === '6mo') text = `${fMonthYear(start).replace('.','/')} – ${fMonthYear(end).replace('.','/')}`;
-        else if (range === '1y') { const y1 = fYear(start); const y2 = fYear(end); text = (y1 === y2) ? `${y1}` : `${y1} – ${y2}`; } 
+        else if (range === '1mo' || range === '6mo') text = `${fMonthYear(start).replace('.', '/')} – ${fMonthYear(end).replace('.', '/')}`;
+        else if (range === '1y') { const y1 = fYear(start); const y2 = fYear(end); text = (y1 === y2) ? `${y1}` : `${y1} – ${y2}`; }
         else text = `${fYear(start)} – ${fYear(end)}`;
-        
+
         el.innerHTML = text;
     } catch (err) { console.error(err); }
 }
@@ -57,7 +57,7 @@ function updatePerformance(startVal, endVal) {
     const pct = (diff / startVal) * 100;
     const sign = pct >= 0 ? '+' : '';
     const colorClass = pct >= 0 ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400';
-    el.innerHTML = `<span class="${colorClass}">${sign}${pct.toFixed(2).replace('.',',')}%</span>`;
+    el.innerHTML = `<span class="${colorClass}">${sign}${pct.toFixed(2).replace('.', ',')}%</span>`;
 }
 
 export function renderChart(containerId, rawData, range = '1y', analysisData = null) {
@@ -75,18 +75,18 @@ export function renderChart(containerId, rawData, range = '1y', analysisData = n
     currentCurrency = rawData.meta.currency || 'USD';
 
     let cleanData = [];
-    const timeSet = new Set(); 
-    for(let i=0; i<timestamps.length; i++) {
+    const timeSet = new Set();
+    for (let i = 0; i < timestamps.length; i++) {
         const t = timestamps[i];
         const p = prices[i];
-        if(p != null && t != null && !timeSet.has(t)) {
+        if (p != null && t != null && !timeSet.has(t)) {
             timeSet.add(t);
             cleanData.push({ time: t, value: p });
         }
     }
     cleanData.sort((a, b) => a.time - b.time);
 
-    if(cleanData.length === 0) {
+    if (cleanData.length === 0) {
         container.innerHTML = '<div class="text-slate-400 p-10 text-center">Keine Daten</div>';
         return;
     }
@@ -107,28 +107,28 @@ export function renderChart(containerId, rawData, range = '1y', analysisData = n
     let visibleStartIndex = 0;
     if (visibleStartTime > 0) {
         visibleStartIndex = cleanData.findIndex(d => d.time >= visibleStartTime);
-        if(visibleStartIndex === -1) visibleStartIndex = 0;
+        if (visibleStartIndex === -1) visibleStartIndex = 0;
     }
 
-    updateRangeInfo(cleanData[visibleStartIndex].time, cleanData[cleanData.length-1].time, range);
-    updatePerformance(cleanData[visibleStartIndex].value, cleanData[cleanData.length-1].value);
+    updateRangeInfo(cleanData[visibleStartIndex].time, cleanData[cleanData.length - 1].time, range);
+    updatePerformance(cleanData[visibleStartIndex].value, cleanData[cleanData.length - 1].value);
 
     // Chart Init
-    if (chart) { try { chart.remove(); } catch(e) {} chart = null; }
+    if (chart) { try { chart.remove(); } catch (e) { } chart = null; }
     container.innerHTML = '';
     container.style.position = 'relative';
 
     const isDark = document.documentElement.classList.contains('dark');
-    const bg = 'transparent'; 
+    const bg = 'transparent';
     const gridColor = isDark ? 'rgba(255, 255, 255, 0.05)' : 'rgba(0, 0, 0, 0.05)';
     const textColor = isDark ? '#94a3b8' : '#64748b';
-    
+
     // Trend Color based on VISIBLE range
     const startPrice = cleanData[visibleStartIndex].value;
     const endPrice = cleanData[cleanData.length - 1].value;
     const isBullish = endPrice >= startPrice;
-    
-    const mainColor = isBullish ? '#22c55e' : '#ef4444'; 
+
+    const mainColor = isBullish ? '#22c55e' : '#ef4444';
     const topColor = isBullish ? 'rgba(34, 197, 94, 0.4)' : 'rgba(239, 68, 68, 0.4)';
     const bottomColor = isBullish ? 'rgba(34, 197, 94, 0.0)' : 'rgba(239, 68, 68, 0.0)';
 
@@ -194,10 +194,10 @@ export function renderChart(containerId, rawData, range = '1y', analysisData = n
                 const price = param.seriesData.get(areaSeries);
                 const dateObj = new Date(param.time * 1000);
                 let dateStr = '';
-                if(range === '1d' || range === '5d' || range === '1W') dateStr = dateObj.toLocaleDateString('de-DE', { day:'2-digit', month:'2-digit', hour:'2-digit', minute:'2-digit' });
-                else dateStr = dateObj.toLocaleDateString('de-DE', { day:'2-digit', month:'2-digit', year:'numeric' });
+                if (range === '1d' || range === '5d' || range === '1W') dateStr = dateObj.toLocaleDateString('de-DE', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' });
+                else dateStr = dateObj.toLocaleDateString('de-DE', { day: '2-digit', month: '2-digit', year: 'numeric' });
 
-                if(price) {
+                if (price) {
                     const priceStr = formatCurrencyValue(price.value || price, currentCurrency);
                     toolTip.innerHTML = `<div style="font-weight: 600">${priceStr}</div><div style="opacity:0.7">${dateStr}</div>`;
                     let left = param.point.x + 15;
@@ -216,7 +216,7 @@ export function renderChart(containerId, rawData, range = '1y', analysisData = n
             if (r.width > 0 && r.height > 0) chart.applyOptions({ width: r.width, height: r.height });
         });
         resizeObserver.observe(container);
-        
+
         // ZOOM LOGIC: Set visible range to what user asked for (e.g. 1 Year), but keep history for SMA
         if (visibleStartTime > 0) {
             chart.timeScale().setVisibleRange({ from: visibleStartTime, to: nowSec });
@@ -224,7 +224,7 @@ export function renderChart(containerId, rawData, range = '1y', analysisData = n
             chart.timeScale().fitContent();
         }
 
-    } catch(err) {
+    } catch (err) {
         console.error("Critical Chart Error:", err);
         container.innerHTML = `<div class="text-red-400 p-10 text-center text-sm">Chart Error: ${err.message}</div>`;
     }

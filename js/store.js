@@ -17,7 +17,7 @@ function getPortfolio() {
             if (item.extraUrl === undefined) { changed = true; item.extraUrl = ''; }
             return item;
         });
-        if(changed) savePortfolio(data);
+        if (changed) savePortfolio(data);
     }
     return data;
 }

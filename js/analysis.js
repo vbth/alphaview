@@ -8,16 +8,16 @@
 export function analyze(chartResult) {
     const prices = extractPrices(chartResult);
     const meta = chartResult.meta;
-    
+
     // Ohne Preise keine Analyse
     if (!prices || prices.length < 2) return null;
 
     const currentPrice = prices[prices.length - 1];
-    
+
     // Performance Berechnung:
     // Standard: Startwert vs. Endwert des geladenen Zeitraums
     let refPrice = prices[0];
-    
+
     // Ausnahme: Bei Intraday (1 Tag) nehmen wir den Schlusskurs vom Vortag (falls verfügbar)
     // damit die %-Anzeige logisch ist (Veränderung seit gestern).
     if (meta.range === '1d' && meta.chartPreviousClose) {
@@ -26,11 +26,11 @@ export function analyze(chartResult) {
 
     const change = currentPrice - refPrice;
     const changePercent = (refPrice !== 0) ? (change / refPrice) * 100 : 0;
-    
+
     // Gleitende Durchschnitte (Simple Moving Averages)
     const sma50 = calculateSMA(prices, 50);
     const sma200 = calculateSMA(prices, 200);
-    
+
     // Trend Bestimmung
     let trend = 'neutral';
     if (currentPrice > sma50 && currentPrice > sma200) trend = 'bullish'; // Über beiden Linien
@@ -46,17 +46,17 @@ export function analyze(chartResult) {
     const type = meta.instrumentType || 'EQUITY';
 
     return {
-        symbol: meta.symbol, 
-        name: fullName, 
+        symbol: meta.symbol,
+        name: fullName,
         type: type,
-        price: currentPrice, 
+        price: currentPrice,
         currency: meta.currency,
-        change: change, 
-        changePercent: changePercent, 
-        trend: trend, 
+        change: change,
+        changePercent: changePercent,
+        trend: trend,
         volatility: volatility,
-        sma50: sma50, 
-        sma200: sma200, 
+        sma50: sma50,
+        sma200: sma200,
         timestamp: new Date().toLocaleTimeString()
     };
 }
@@ -66,7 +66,7 @@ function extractPrices(chartResult) {
     const adjClose = chartResult.indicators.adjclose?.[0]?.adjclose;
     const close = chartResult.indicators.quote[0].close;
     const arr = adjClose || close;
-    if(!arr) return [];
+    if (!arr) return [];
     return arr.filter(p => p !== null && p !== undefined);
 }
 
