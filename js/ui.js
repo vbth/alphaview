@@ -157,6 +157,14 @@ function renderCardHeader(data) {
         ? `https://www.marketwatch.com/investing/fund/${safeSymbol}`
         : `https://www.marketwatch.com/investing/stock/${safeSymbol}`;
 
+    // Index-Spezialbehandlung: Keine Währung, Keine Nachkommastellen
+    let priceDisplay;
+    if (data.type === 'INDEX') {
+        priceDisplay = new Intl.NumberFormat('de-DE', { maximumFractionDigits: 0 }).format(data.price);
+    } else {
+        priceDisplay = formatMoney(data.price, data.currency);
+    }
+
     return `
         <div class="flex justify-between items-start mb-4 gap-4">
             <div class="flex-grow min-w-0 pr-2"> 
@@ -170,7 +178,7 @@ function renderCardHeader(data) {
                 </div>
             </div>
             <div class="text-right whitespace-nowrap pt-1 ml-auto">
-                <div class="text-xl font-bold font-mono text-slate-900 dark:text-slate-100">${formatMoney(data.price, data.currency)}</div>
+                <div class="text-xl font-bold font-mono text-slate-900 dark:text-slate-100">${priceDisplay}</div>
                 <div class="text-sm font-medium font-mono ${colorClass}">${formatPercent(data.changePercent)}</div>
             </div>
         </div>
@@ -196,28 +204,36 @@ function renderCardInfoBox(data, qty, url, extraUrl, positionValueNative, weight
         extraPlaceholder = 'Holdings-Link...';
     }
 
+    const isIndex = data.type === 'INDEX';
+
+    // Für Indizes blenden wir Kurswert und Stückzahl aus
+    const valueRow = isIndex ? '' : `
+        <div class="flex justify-between items-center border-b border-slate-200 dark:border-slate-700 pb-2 mb-2">
+            <div class="flex items-center gap-2">
+                <i class="fa-solid fa-coins text-slate-400 text-xs"></i>
+                <label class="text-xs text-slate-500">Kurswert</label>
+            </div>
+            <div class="font-mono font-bold text-slate-900 dark:text-white text-right">
+                ${formatMoney(positionValueNative, data.currency)}
+            </div>
+        </div>`;
+
+    const qtyRow = isIndex ? '' : `
+        <div class="flex justify-between items-center mb-2">
+            <div class="flex items-center gap-2">
+                <i class="fa-solid fa-layer-group text-slate-400 text-xs"></i>
+                <label class="text-xs text-slate-600 dark:text-slate-400">Stückzahl</label>
+                <span class="ml-1 text-[10px] bg-slate-200 dark:bg-slate-700 text-slate-600 dark:text-slate-300 px-1.5 py-0.5 rounded font-mono">
+                    ${weightPercent.toFixed(2).replace('.', ',')}%
+                </span>
+            </div>
+            <input type="number" min="0" step="any" class="qty-input dashboard-action w-24 text-right text-sm bg-white dark:bg-slate-700 border border-slate-200 dark:border-slate-600 rounded px-2 py-1 focus:ring-2 focus:ring-primary outline-none" value="${qty}" data-symbol="${data.symbol}" data-action="qty" placeholder="0">
+        </div>`;
+
     return `
         <div class="bg-slate-50 dark:bg-slate-800/50 rounded-lg p-3 mb-4 border border-slate-100 dark:border-slate-700" onclick="event.stopPropagation()">
-            <div class="flex justify-between items-center border-b border-slate-200 dark:border-slate-700 pb-2 mb-2">
-                <div class="flex items-center gap-2">
-                    <i class="fa-solid fa-coins text-slate-400 text-xs"></i>
-                    <label class="text-xs text-slate-500">Kurswert</label>
-                </div>
-                <div class="font-mono font-bold text-slate-900 dark:text-white text-right">
-                    ${formatMoney(positionValueNative, data.currency)}
-                </div>
-            </div>
-
-            <div class="flex justify-between items-center mb-2">
-                <div class="flex items-center gap-2">
-                    <i class="fa-solid fa-layer-group text-slate-400 text-xs"></i>
-                    <label class="text-xs text-slate-600 dark:text-slate-400">Stückzahl</label>
-                    <span class="ml-1 text-[10px] bg-slate-200 dark:bg-slate-700 text-slate-600 dark:text-slate-300 px-1.5 py-0.5 rounded font-mono">
-                        ${weightPercent.toFixed(2).replace('.', ',')}%
-                    </span>
-                </div>
-                <input type="number" min="0" step="any" class="qty-input dashboard-action w-24 text-right text-sm bg-white dark:bg-slate-700 border border-slate-200 dark:border-slate-600 rounded px-2 py-1 focus:ring-2 focus:ring-primary outline-none" value="${qty}" data-symbol="${data.symbol}" data-action="qty" placeholder="0">
-            </div>
+            ${valueRow}
+            ${qtyRow}
 
             <div class="flex items-center gap-2 pt-1">
                 <i class="fa-solid fa-link text-slate-400 text-xs"></i>
