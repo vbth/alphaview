@@ -124,8 +124,8 @@ export function createStockCardHTML(data, qty, url, extraUrl, totalPortfolioValu
     const weightPercent = totalPortfolioValueEUR > 0 ? (positionValueEUR / totalPortfolioValueEUR) * 100 : 0;
 
     return `
-        <div class="stock-card group relative bg-white dark:bg-dark-surface rounded-xl shadow-sm border border-slate-200 dark:border-slate-700 hover:shadow-lg hover:border-primary/50 dark:hover:border-neon-accent/50 transition-all duration-300 cursor-pointer overflow-hidden" data-symbol="${data.symbol}">
-            <div class="p-5">
+        <div class="stock-card group relative bg-white dark:bg-dark-surface rounded-xl shadow-sm border border-slate-200 dark:border-slate-700 hover:shadow-lg hover:border-primary/50 dark:hover:border-neon-accent/50 transition-all duration-300 cursor-pointer overflow-hidden flex flex-col h-full" data-symbol="${data.symbol}">
+            <div class="p-5 flex flex-col flex-grow">
                 ${renderCardHeader(data)}
                 ${renderCardInfoBox(data, qty, url, extraUrl, positionValueNative, weightPercent)}
                 ${renderCardFooter(data, isUp)}
@@ -259,7 +259,7 @@ function renderCardInfoBox(data, qty, url, extraUrl, positionValueNative, weight
 function renderCardFooter(data, isUp) {
     const trendIcon = data.trend === 'bullish' ? 'fa-arrow-trend-up' : (data.trend === 'bearish' ? 'fa-arrow-trend-down' : 'fa-minus');
     return `
-        <div class="flex items-center justify-between text-xs text-slate-500 dark:text-slate-400 mt-4 border-t border-slate-50 dark:border-slate-800 pt-3">
+        <div class="flex items-center justify-between text-xs text-slate-500 dark:text-slate-400 mt-auto border-t border-slate-50 dark:border-slate-800 pt-3">
             <div class="flex items-center gap-2">
                 <div class="flex items-center gap-1"><i class="fa-solid ${trendIcon}"></i> ${data.trend}</div>
                 <span class="text-slate-300 dark:text-slate-600">•</span>
