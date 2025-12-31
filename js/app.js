@@ -106,7 +106,9 @@ async function fetchPortfolioData(watchlist, dashboardRange) {
                 if (apiRange === '1mo') interval = '1d';
 
                 const rawData = await fetchChartData(item.symbol, apiRange, interval);
-                if (!rawData) return null;
+                if (!rawData) {
+                    return { symbol: item.symbol, error: true, errorMsg: "Keine Daten (API)." };
+                }
 
                 const analysis = analyze(rawData);
 

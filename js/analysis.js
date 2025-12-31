@@ -83,7 +83,16 @@ export function analyze(chartResult) {
 function extractPrices(chartResult) {
     const adjClose = chartResult.indicators.adjclose?.[0]?.adjclose;
     const close = chartResult.indicators.quote[0].close;
-    const arr = adjClose || close;
+
+    // Versuche erst AdjClose, aber nur wenn valide Daten enthalten sind
+    let arr = adjClose;
+    let valid = (arr && arr.length > 0) ? arr.filter(p => p !== null && p !== undefined) : [];
+
+    // Wenn AdjClose leer ist, nimm Close
+    if (valid.length === 0 && close) {
+        arr = close;
+    }
+
     if (!arr) return [];
     return arr.filter(p => p !== null && p !== undefined);
 }
