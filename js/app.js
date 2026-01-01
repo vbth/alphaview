@@ -235,9 +235,28 @@ function initDashboardEvents() {
         if (deleteBtn) {
             e.stopPropagation();
             const sym = deleteBtn.dataset.symbol;
-            if (confirm(`${sym} entfernen?`)) {
+            // 2-Step Delete Logic ( UX improvement over window.confirm )
+            if (deleteBtn.dataset.confirmState === 'active') {
                 removeSymbol(sym);
                 loadDashboard();
+            } else {
+                // Save original state
+                const originalHtml = deleteBtn.innerHTML;
+                const originalClasses = deleteBtn.className;
+
+                // Set confirm state
+                deleteBtn.dataset.confirmState = 'active';
+                deleteBtn.innerHTML = '<i class="fa-solid fa-check"></i> Bestätigen?';
+                deleteBtn.className = 'delete-btn dashboard-action text-white bg-red-600 hover:bg-red-700 flex items-center gap-1.5 px-2 py-1 rounded shadow-sm transition-all';
+
+                // Auto-reset after 3 seconds
+                setTimeout(() => {
+                    if (deleteBtn && deleteBtn.isConnected && deleteBtn.dataset.confirmState === 'active') {
+                        deleteBtn.dataset.confirmState = 'inactive';
+                        deleteBtn.innerHTML = originalHtml;
+                        deleteBtn.className = originalClasses;
+                    }
+                }, 3000);
             }
             return;
         }
