@@ -172,8 +172,8 @@ function renderCardHeader(data) {
                 <div class="flex items-center gap-2 text-xs font-mono text-slate-500 mt-1">
                     <span class="${tStyle.color} px-1.5 py-0.5 rounded border text-[10px] font-bold tracking-wide">${tStyle.label}</span>
                     <span class="font-bold text-slate-700 dark:text-slate-300 ml-1">${data.symbol}</span>
-                    <a href="${mwUrl}" target="_blank" class="ml-1 text-slate-400 hover:text-primary transition-colors" title="MarketWatch Research">
-                        <i class="fa-solid fa-microchip text-[10px]"></i>
+                    <a href="${mwUrl}" target="_blank" class="ml-1 text-[10px] text-slate-400 hover:text-primary transition-colors hover:underline" title="MarketWatch Research">
+                        MarketWatch
                     </a>
                 </div>
             </div>

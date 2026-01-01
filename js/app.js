@@ -597,7 +597,7 @@ function initCopyFeatures() {
 
             items.sort((a, b) => b.valEur - a.valEur);
 
-            let text = "| Asset | Symbol | Weight | Perf | Volatility | Trend |\n";
+            let text = "| Vermögenswert | Symbol | Gewichtung | Wertentwicklung | Volatilität | Trend |\n";
             text += "| :--- | :--- | :--- | :--- | :--- | :--- |\n";
 
             items.forEach(i => {
