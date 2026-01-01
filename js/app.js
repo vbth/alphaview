@@ -484,68 +484,67 @@ function initSearch() {
     });
 
     input.addEventListener('keydown', (e) => {
+        if (e.key === 'ArrowDown') {
+            e.preventDefault();
+            const items = resultsContainer.querySelectorAll('.search-item');
+            if (items.length > 0) {
+                state.selectedSearchIndex = (state.selectedSearchIndex + 1) % items.length;
+                updateSearchSelection(items);
+            }
+        } else if (e.key === 'ArrowUp') {
+            e.preventDefault();
+            const items = resultsContainer.querySelectorAll('.search-item');
+            if (items.length > 0) {
+                state.selectedSearchIndex = state.selectedSearchIndex - 1;
+                if (state.selectedSearchIndex < 0) state.selectedSearchIndex = items.length - 1;
+                updateSearchSelection(items);
+            }
+        } else if (e.key === 'Enter') {
+            const items = resultsContainer.querySelectorAll('.search-item');
+            if (state.selectedSearchIndex >= 0 && items[state.selectedSearchIndex]) {
+                const symbol = items[state.selectedSearchIndex].dataset.symbol;
+                addSymbol(symbol);
+                input.value = '';
+                resultsContainer.classList.add('hidden');
+                state.selectedSearchIndex = -1;
+                loadDashboard();
+            } else {
+                const val = input.value.trim().toUpperCase();
+                if (val.length > 0) {
+                    addSymbol(val);
+                    input.value = '';
+                    resultsContainer.classList.add('hidden');
+                    loadDashboard();
+                }
+            }
+        }
+    });
+
+    function updateSearchSelection(items) {
+        items.forEach((item, index) => {
+            if (index === state.selectedSearchIndex) {
+                item.classList.add('bg-slate-100', 'dark:bg-slate-700');
+            } else {
+                item.classList.remove('bg-slate-100', 'dark:bg-slate-700');
+            }
+        });
     }
-        } else if (e.key === 'ArrowDown') {
-    e.preventDefault();
-    const items = resultsContainer.querySelectorAll('.search-item');
-    if (items.length > 0) {
-        state.selectedSearchIndex = (state.selectedSearchIndex + 1) % items.length;
-        updateSearchSelection(items);
-    }
-} else if (e.key === 'ArrowUp') {
-    e.preventDefault();
-    const items = resultsContainer.querySelectorAll('.search-item');
-    if (items.length > 0) {
-        state.selectedSearchIndex = state.selectedSearchIndex - 1;
-        if (state.selectedSearchIndex < 0) state.selectedSearchIndex = items.length - 1;
-        updateSearchSelection(items);
-    }
-} else if (e.key === 'Enter') {
-    const items = resultsContainer.querySelectorAll('.search-item');
-    if (state.selectedSearchIndex >= 0 && items[state.selectedSearchIndex]) {
-        const symbol = items[state.selectedSearchIndex].dataset.symbol;
-        addSymbol(symbol);
-        input.value = '';
-        resultsContainer.classList.add('hidden');
-        state.selectedSearchIndex = -1;
-        loadDashboard();
-    } else {
-        const val = input.value.trim().toUpperCase();
-        if (val.length > 0) {
-            addSymbol(val);
-            input.value = '';
+
+    input.addEventListener('input', (e) => {
+        const query = e.target.value.trim();
+        clearTimeout(state.searchDebounce);
+
+        if (query.length < 2) {
             resultsContainer.classList.add('hidden');
-            loadDashboard();
+            return;
         }
-    }
-}
+
+        state.searchDebounce = setTimeout(async () => {
+            const results = await searchSymbol(query);
+            state.selectedSearchIndex = -1;
+            renderSearchResults(results, resultsContainer);
+        }, 500);
     });
-
-function updateSearchSelection(items) {
-    items.forEach((item, index) => {
-        if (index === state.selectedSearchIndex) {
-            item.classList.add('bg-slate-100', 'dark:bg-slate-700');
-        } else {
-            item.classList.remove('bg-slate-100', 'dark:bg-slate-700');
-        }
-    });
-}
-
-input.addEventListener('input', (e) => {
-    const query = e.target.value.trim();
-    clearTimeout(state.searchDebounce);
-
-    if (query.length < 2) {
-        resultsContainer.classList.add('hidden');
-        return;
-    }
-
-    state.searchDebounce = setTimeout(async () => {
-        const results = await searchSymbol(query);
-        state.selectedSearchIndex = -1;
-        renderSearchResults(results, resultsContainer);
-    }, 500);
-});
 }
 
 // --- DATEN-MANAGEMENT & EXPORTE ---
