@@ -65,14 +65,6 @@ export function renderAppSkeleton(container) {
             </div>
             <div class="flex gap-4 md:gap-8 flex-col items-end">
                 <!-- VIEW MODE TOGGLE -->
-                <div class="flex bg-slate-100 dark:bg-slate-800 p-1 rounded-lg border border-slate-200 dark:border-slate-700">
-                     <button id="view-mode-grid" class="view-mode-btn px-3 py-1.5 rounded-md text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white transition-colors flex items-center gap-2 text-xs font-bold bg-white dark:bg-slate-700 shadow-sm">
-                        <i class="fa-solid fa-border-all"></i> Grid
-                    </button>
-                    <button id="view-mode-list" class="view-mode-btn px-3 py-1.5 rounded-md text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white transition-colors flex items-center gap-2 text-xs font-bold">
-                        <i class="fa-solid fa-list"></i> List
-                    </button>
-                </div>
                 <div class="text-right">
                     <div class="text-xs text-slate-500">Positionen</div>
                     <div class="text-xl font-mono font-medium dark:text-slate-200" id="total-positions">0</div>
@@ -102,6 +94,16 @@ export function renderAppSkeleton(container) {
                 <button class="sort-btn px-3 py-1.5 text-xs font-bold rounded-md text-slate-500 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-700 transition-all flex items-center gap-1" data-sort="value">Wert <i class="fa-solid fa-sort text-slate-300 ml-1 pointer-events-none"></i></button>
                 <button class="sort-btn px-3 py-1.5 text-xs font-bold rounded-md text-slate-500 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-700 transition-all flex items-center gap-1" data-sort="percent">Anteil <i class="fa-solid fa-sort text-slate-300 ml-1 pointer-events-none"></i></button>
                 <button class="sort-btn px-3 py-1.5 text-xs font-bold rounded-md text-slate-500 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-700 transition-all flex items-center gap-1" data-sort="performance">Perf <i class="fa-solid fa-sort text-slate-300 ml-1 pointer-events-none"></i></button>
+
+                <!-- VIEW MODE -->
+                <div class="w-px h-6 bg-slate-200 dark:bg-slate-700 mx-1 hidden md:block"></div>
+                
+                <button id="view-mode-grid" class="view-mode-btn px-3 py-1.5 text-xs font-bold rounded-md text-slate-500 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-700 transition-all flex items-center gap-1">
+                   <i class="fa-solid fa-border-all"></i> Raster
+                </button>
+                <button id="view-mode-list" class="view-mode-btn px-3 py-1.5 text-xs font-bold rounded-md text-slate-500 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-700 transition-all flex items-center gap-1">
+                    <i class="fa-solid fa-list"></i> Liste
+                </button>
             </div>
         </div>
 

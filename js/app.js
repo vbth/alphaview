@@ -174,14 +174,14 @@ function renderDashboardGrid() {
     const btnList = document.getElementById('view-mode-list');
     if (btnGrid && btnList) {
         if (state.viewMode === 'grid') {
-            btnGrid.className = 'view-mode-btn px-3 py-1.5 rounded-md text-primary dark:text-white bg-white dark:bg-slate-700 shadow-sm flex items-center gap-2 text-xs font-bold transition-all';
-            btnList.className = 'view-mode-btn px-3 py-1.5 rounded-md text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white transition-colors flex items-center gap-2 text-xs font-bold';
+            btnGrid.className = 'px-3 py-1.5 text-xs font-bold rounded-md bg-slate-100 dark:bg-slate-600 text-primary dark:text-white transition-all flex items-center gap-1 border border-slate-200 dark:border-slate-700 shadow-sm';
+            btnList.className = 'px-3 py-1.5 text-xs font-bold rounded-md text-slate-500 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-700 transition-all flex items-center gap-1';
             gridEl.className = 'grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6';
             btnGrid.innerHTML = '<i class="fa-solid fa-border-all"></i> Raster';
             btnList.innerHTML = '<i class="fa-solid fa-list"></i> Liste';
         } else {
-            btnList.className = 'view-mode-btn px-3 py-1.5 rounded-md text-primary dark:text-white bg-white dark:bg-slate-700 shadow-sm flex items-center gap-2 text-xs font-bold transition-all';
-            btnGrid.className = 'view-mode-btn px-3 py-1.5 rounded-md text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white transition-colors flex items-center gap-2 text-xs font-bold';
+            btnList.className = 'px-3 py-1.5 text-xs font-bold rounded-md bg-slate-100 dark:bg-slate-600 text-primary dark:text-white transition-all flex items-center gap-1 border border-slate-200 dark:border-slate-700 shadow-sm';
+            btnGrid.className = 'px-3 py-1.5 text-xs font-bold rounded-md text-slate-500 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-700 transition-all flex items-center gap-1';
             gridEl.className = 'flex flex-col w-full';
             btnGrid.innerHTML = '<i class="fa-solid fa-border-all"></i> Raster';
             btnList.innerHTML = '<i class="fa-solid fa-list"></i> Liste';
