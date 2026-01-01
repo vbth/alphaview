@@ -172,9 +172,6 @@ function renderCardHeader(data) {
                 <div class="flex items-center gap-2 text-xs font-mono text-slate-500 mt-1">
                     <span class="${tStyle.color} px-1.5 py-0.5 rounded border text-[10px] font-bold tracking-wide">${tStyle.label}</span>
                     <span class="font-bold text-slate-700 dark:text-slate-300 ml-1">${data.symbol}</span>
-                    <a href="${mwUrl}" target="_blank" class="ml-1 text-[10px] text-slate-400 hover:text-primary transition-colors hover:underline" title="MarketWatch Research">
-                        MarketWatch
-                    </a>
                 </div>
             </div>
             <div class="text-right whitespace-nowrap pt-1 ml-auto">
@@ -261,9 +258,11 @@ function renderCardFooter(data, isUp) {
     return `
         <div class="flex items-center justify-between text-xs text-slate-500 dark:text-slate-400 mt-auto border-t border-slate-50 dark:border-slate-800 pt-3">
             <div class="flex items-center gap-2">
+                ${(data.trend && data.volatility) ? `
                 <div class="flex items-center gap-1"><i class="fa-solid ${trendIcon}"></i> ${data.trend}</div>
                 <span class="text-slate-300 dark:text-slate-600">•</span>
                 <div>Volatilität ${data.volatility.toFixed(1)}%</div>
+                ` : '<span></span>'}
             </div>
             <button type="button" class="delete-btn dashboard-action text-slate-400 hover:text-red-500 transition-colors flex items-center gap-1.5 px-2 py-1 hover:bg-red-50 dark:hover:bg-red-900/20 rounded" data-symbol="${data.symbol}" data-action="delete" title="Entfernen">
                 <i class="fa-solid fa-trash-can"></i> Entfernen

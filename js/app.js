@@ -534,16 +534,22 @@ function initDataManagement() {
                     const originalHtml = importBtn.innerHTML;
                     const originalClasses = importBtn.className;
                     const originalWidth = importBtn.offsetWidth; // Capture current width
+                    const originalHeight = importBtn.offsetHeight; // Capture current height
 
                     importBtn.dataset.confirmState = 'active';
                     importBtn.style.width = `${originalWidth}px`; // Lock width
-                    importBtn.innerHTML = '<i class="fa-solid fa-check"></i> <span>Sicher?</span>'; // Shortened text to fit better
+                    importBtn.style.height = `${originalHeight}px`; // Lock height
+                    importBtn.innerHTML = '<i class="fa-solid fa-check"></i> <span>Sicher?</span>';
+                    // Use SAME classes as original but swap colors (no layout changes like 'justify-center' addition if it wasn't there, or keep it consistent)
+                    // The original had 'flex items-center gap-2'. We add 'justify-center' to both states to be safe, or just here.
+                    // Let's add justify-center to the ACTIVE state to center the shorter text in the fixed box.
                     importBtn.className = 'bg-red-50 dark:bg-red-900/20 text-red-600 dark:text-red-400 border border-red-200 dark:border-red-800 px-4 py-2 rounded-lg text-sm font-medium transition-all shadow-sm flex items-center justify-center gap-2';
 
                     setTimeout(() => {
                         if (importBtn.dataset.confirmState === 'active') {
                             importBtn.dataset.confirmState = 'inactive';
                             importBtn.style.width = ''; // Unlock width
+                            importBtn.style.height = '';
                             importBtn.innerHTML = originalHtml;
                             importBtn.className = originalClasses;
                         }
