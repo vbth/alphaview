@@ -8,7 +8,7 @@ import { initTheme, toggleTheme } from './theme.js';
 import { fetchChartData, searchSymbol } from './api.js';
 import { analyze } from './analysis.js';
 import { getWatchlist, addSymbol, removeSymbol, updateQuantity, updateUrl, updateExtraUrl } from './store.js';
-import { renderAppSkeleton, createStockCardHTML, createErrorCardHTML, renderSearchResults, formatMoney, updateSortUI } from './ui.js';
+import { renderAppSkeleton, createStockCardHTML, createErrorCardHTML, renderSearchResults, formatMoney, updateSortUI, renderDashboardList } from './ui.js';
 import { renderChart } from './charts.js';
 import { ASSET_TYPES, DEFAULT_ASSET_STYLE } from './config.js';
 
@@ -20,7 +20,9 @@ const state = {
     dashboardData: [],
     eurUsdRate: 1.08,
     sortField: 'value',
-    sortDirection: 'desc'
+    sortDirection: 'desc',
+    viewMode: localStorage.getItem('alphaview_view_mode') || 'grid',
+    selectedSearchIndex: -1
 };
 
 const rootEl = document.getElementById('app-root');
@@ -166,6 +168,21 @@ async function fetchPortfolioData(watchlist, dashboardRange) {
  */
 function renderDashboardGrid() {
     const gridEl = document.getElementById('dashboard-grid');
+
+    // Toggle Button UI updating
+    const btnGrid = document.getElementById('view-mode-grid');
+    const btnList = document.getElementById('view-mode-list');
+    if (btnGrid && btnList) {
+        if (state.viewMode === 'grid') {
+            btnGrid.className = 'view-mode-btn px-3 py-1.5 rounded-md text-primary dark:text-white bg-white dark:bg-slate-700 shadow-sm flex items-center gap-2 text-xs font-bold transition-all';
+            btnList.className = 'view-mode-btn px-3 py-1.5 rounded-md text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white transition-colors flex items-center gap-2 text-xs font-bold';
+            gridEl.className = 'grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6';
+        } else {
+            btnList.className = 'view-mode-btn px-3 py-1.5 rounded-md text-primary dark:text-white bg-white dark:bg-slate-700 shadow-sm flex items-center gap-2 text-xs font-bold transition-all';
+            btnGrid.className = 'view-mode-btn px-3 py-1.5 rounded-md text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white transition-colors flex items-center gap-2 text-xs font-bold';
+            gridEl.className = 'flex flex-col w-full';
+        }
+    }
     const totalEurEl = document.getElementById('total-balance-eur');
     const totalUsdEl = document.getElementById('total-balance-usd');
     const totalPosEl = document.getElementById('total-positions');
@@ -211,10 +228,14 @@ function renderDashboardGrid() {
     if (totalUsdEl) totalUsdEl.textContent = formatMoney(totalUSD, 'USD');
     if (totalPosEl) totalPosEl.textContent = state.dashboardData.length;
 
-    gridEl.innerHTML = preparedData.map(data => {
-        if (data.error) return createErrorCardHTML(data.symbol, data.errorMsg);
-        return createStockCardHTML(data, data.qty, data.url, data.extraUrl, totalEUR, state.eurUsdRate);
-    }).join('');
+    if (state.viewMode === 'list') {
+        renderDashboardList(preparedData, gridEl, state.eurUsdRate);
+    } else {
+        gridEl.innerHTML = preparedData.map(data => {
+            if (data.error) return createErrorCardHTML(data.symbol, data.errorMsg);
+            return createStockCardHTML(data, data.qty, data.url, data.extraUrl, totalEUR, state.eurUsdRate);
+        }).join('');
+    }
 }
 
 /**
@@ -463,31 +484,68 @@ function initSearch() {
     });
 
     input.addEventListener('keydown', (e) => {
-        if (e.key === 'Enter') {
-            const val = input.value.trim().toUpperCase();
-            if (val.length > 0) {
-                addSymbol(val);
-                input.value = '';
-                resultsContainer.classList.add('hidden');
-                loadDashboard();
-            }
-        }
-    });
-
-    input.addEventListener('input', (e) => {
-        const query = e.target.value.trim();
-        clearTimeout(state.searchDebounce);
-
-        if (query.length < 2) {
+    }
+        } else if (e.key === 'ArrowDown') {
+    e.preventDefault();
+    const items = resultsContainer.querySelectorAll('.search-item');
+    if (items.length > 0) {
+        state.selectedSearchIndex = (state.selectedSearchIndex + 1) % items.length;
+        updateSearchSelection(items);
+    }
+} else if (e.key === 'ArrowUp') {
+    e.preventDefault();
+    const items = resultsContainer.querySelectorAll('.search-item');
+    if (items.length > 0) {
+        state.selectedSearchIndex = state.selectedSearchIndex - 1;
+        if (state.selectedSearchIndex < 0) state.selectedSearchIndex = items.length - 1;
+        updateSearchSelection(items);
+    }
+} else if (e.key === 'Enter') {
+    const items = resultsContainer.querySelectorAll('.search-item');
+    if (state.selectedSearchIndex >= 0 && items[state.selectedSearchIndex]) {
+        const symbol = items[state.selectedSearchIndex].dataset.symbol;
+        addSymbol(symbol);
+        input.value = '';
+        resultsContainer.classList.add('hidden');
+        state.selectedSearchIndex = -1;
+        loadDashboard();
+    } else {
+        const val = input.value.trim().toUpperCase();
+        if (val.length > 0) {
+            addSymbol(val);
+            input.value = '';
             resultsContainer.classList.add('hidden');
-            return;
+            loadDashboard();
         }
-
-        state.searchDebounce = setTimeout(async () => {
-            const results = await searchSymbol(query);
-            renderSearchResults(results, resultsContainer);
-        }, 500);
+    }
+}
     });
+
+function updateSearchSelection(items) {
+    items.forEach((item, index) => {
+        if (index === state.selectedSearchIndex) {
+            item.classList.add('bg-slate-100', 'dark:bg-slate-700');
+        } else {
+            item.classList.remove('bg-slate-100', 'dark:bg-slate-700');
+        }
+    });
+}
+
+input.addEventListener('input', (e) => {
+    const query = e.target.value.trim();
+    clearTimeout(state.searchDebounce);
+
+    if (query.length < 2) {
+        resultsContainer.classList.add('hidden');
+        return;
+    }
+
+    state.searchDebounce = setTimeout(async () => {
+        const results = await searchSymbol(query);
+        state.selectedSearchIndex = -1;
+        renderSearchResults(results, resultsContainer);
+    }, 500);
+});
 }
 
 // --- DATEN-MANAGEMENT & EXPORTE ---
@@ -690,6 +748,10 @@ document.addEventListener('DOMContentLoaded', () => {
     initDataManagement();
     initCopyFeatures();
     initDashboardEvents();
+
+    // View Mode Events
+    document.getElementById('view-mode-grid')?.addEventListener('click', () => { state.viewMode = 'grid'; localStorage.setItem('alphaview_view_mode', 'grid'); renderDashboardGrid(); });
+    document.getElementById('view-mode-list')?.addEventListener('click', () => { state.viewMode = 'list'; localStorage.setItem('alphaview_view_mode', 'list'); renderDashboardGrid(); });
 
     // PROXY WARMUP: Fire a silent request to wake up cold proxies
     fetchChartData('AAPL', '1d', '1d').then(() => console.log('Proxy Warmup Complete')).catch(() => { });

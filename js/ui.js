@@ -63,8 +63,17 @@ export function renderAppSkeleton(container) {
                 <div class="text-4xl font-bold text-slate-900 dark:text-white" id="total-balance-eur">---</div>
                 <div class="text-lg font-mono font-medium text-slate-500 dark:text-slate-400 mt-1" id="total-balance-usd">---</div>
             </div>
-            <div class="flex gap-8 text-left md:text-right w-full md:w-auto">
-                <div>
+            <div class="flex gap-4 md:gap-8 flex-col items-end">
+                <!-- VIEW MODE TOGGLE -->
+                <div class="flex bg-slate-100 dark:bg-slate-800 p-1 rounded-lg border border-slate-200 dark:border-slate-700">
+                     <button id="view-mode-grid" class="view-mode-btn px-3 py-1.5 rounded-md text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white transition-colors flex items-center gap-2 text-xs font-bold bg-white dark:bg-slate-700 shadow-sm">
+                        <i class="fa-solid fa-grid-2"></i> Grid
+                    </button>
+                    <button id="view-mode-list" class="view-mode-btn px-3 py-1.5 rounded-md text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white transition-colors flex items-center gap-2 text-xs font-bold">
+                        <i class="fa-solid fa-list"></i> List
+                    </button>
+                </div>
+                <div class="text-right">
                     <div class="text-xs text-slate-500">Positionen</div>
                     <div class="text-xl font-mono font-medium dark:text-slate-200" id="total-positions">0</div>
                 </div>
@@ -264,11 +273,85 @@ function renderCardFooter(data, isUp) {
                 <div>Volatilität ${data.volatility.toFixed(1)}%</div>
                 ` : '<span></span>'}
             </div>
-            <button type="button" class="delete-btn dashboard-action text-slate-400 hover:text-red-500 transition-colors flex items-center gap-1.5 px-2 py-1 hover:bg-red-50 dark:hover:bg-red-900/20 rounded" data-symbol="${data.symbol}" data-action="delete" title="Entfernen">
+            <button type="button" class="delete-btn dashboard-action text-slate-400 hover:text-red-500 transition-colors flex items-center gap-1.5 px-2 py-1 hover:bg-red-50 dark:hover:bg-red-900/20 rounded text-xs" data-symbol="${data.symbol}" data-action="delete" title="Entfernen">
                 <i class="fa-solid fa-trash-can"></i> Entfernen
             </button>
         </div>
     `;
+}
+
+/**
+ * Rendert das Dashboard als Liste.
+ * @param {Array} data - Die Analysedaten.
+ * @param {HTMLElement} container - Der Grid-Container (wird hier für Liste umfunktioniert).
+ * @param {number} eurUsdRate - Wechselkurs.
+ */
+export function renderDashboardList(data, container, eurUsdRate) {
+    container.className = 'flex flex-col gap-0 bg-white dark:bg-dark-surface rounded-xl shadow-sm border border-slate-200 dark:border-slate-700 overflow-hidden';
+
+    // Header
+    let html = `
+        <div class="grid grid-cols-12 gap-4 px-6 py-3 bg-slate-50 dark:bg-slate-800/50 border-b border-slate-200 dark:border-slate-700 text-xs font-bold text-slate-500 uppercase tracking-wider">
+            <div class="col-span-4 md:col-span-3">Asset</div>
+            <div class="col-span-2 text-right">Price</div>
+            <div class="col-span-2 text-right">Perf</div>
+            <div class="col-span-2 text-right">Value</div>
+            <div class="col-span-2 md:col-span-1 text-right">Qty</div>
+            <div class="col-span-2 text-right hidden md:block">Action</div>
+        </div>
+    `;
+
+    // Rows
+    data.forEach(item => {
+        if (item.error) return; // Errors handled separately/ignored in list for now or appended bottom
+
+        const isUp = item.change >= 0;
+        const colorClass = isUp ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400';
+        const positionValueNative = item.price * item.qty;
+        let positionValueEUR = (item.currency === 'USD') ? positionValueNative / eurUsdRate : positionValueNative;
+
+        // MarketWatch Link
+        const safeSymbol = item.symbol.split('.')[0].toLowerCase();
+        const mwUrl = (item.type === 'ETF' || item.type === 'MUTUALFUND')
+            ? `https://www.marketwatch.com/investing/fund/${safeSymbol}`
+            : `https://www.marketwatch.com/investing/stock/${safeSymbol}`;
+
+        html += `
+        <div class="grid grid-cols-12 gap-4 px-6 py-4 border-b border-slate-100 dark:border-slate-800 last:border-0 hover:bg-slate-50 dark:hover:bg-slate-700/30 transition-colors items-center group stock-card" data-symbol="${item.symbol}">
+            <div class="col-span-4 md:col-span-3 min-w-0">
+                 <div class="font-bold text-slate-900 dark:text-white truncate" title="${item.name}">${item.name}</div>
+                 <div class="text-xs font-mono text-slate-500 flex gap-2">
+                    <span>${item.symbol}</span>
+                    <a href="${mwUrl}" target="_blank" class="text-slate-400 hover:text-primary transition-colors hover:underline">MW</a>
+                 </div>
+            </div>
+            
+            <div class="col-span-2 text-right font-mono text-sm text-slate-700 dark:text-slate-300">
+                ${formatMoney(item.price, item.currency)}
+            </div>
+
+            <div class="col-span-2 text-right font-mono text-sm font-medium ${colorClass}">
+                ${formatPercent(item.changePercent)}
+            </div>
+
+            <div class="col-span-2 text-right font-mono font-bold text-slate-900 dark:text-white text-sm">
+                ${formatMoney(positionValueNative, item.currency)}
+            </div>
+
+            <div class="col-span-2 md:col-span-1 flex justify-end">
+                <input type="number" min="0" step="any" class="qty-input dashboard-action w-20 text-right text-xs bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-600 rounded px-1.5 py-1 focus:ring-1 focus:ring-primary outline-none" value="${item.qty}" data-symbol="${item.symbol}" data-action="qty" onclick="event.stopPropagation()">
+            </div>
+
+            <div class="col-span-2 text-right hidden md:flex justify-end gap-2">
+                <button type="button" class="delete-btn dashboard-action text-slate-400 hover:text-red-500 transition-colors px-2 py-1 rounded hover:bg-red-50 dark:hover:bg-red-900/20" data-symbol="${item.symbol}" data-action="delete" title="Entfernen">
+                    <i class="fa-solid fa-trash-can"></i>
+                </button>
+            </div>
+        </div>
+        `;
+    });
+
+    container.innerHTML = html;
 }
 
 /**
