@@ -526,20 +526,24 @@ function initDataManagement() {
                     importInput.click();
                     // Reset Button State Immediately
                     importBtn.dataset.confirmState = 'inactive';
+                    importBtn.style.width = ''; // Remove fixed width
                     importBtn.innerHTML = '<i class="fa-solid fa-file-import"></i> <span>Depot laden</span>';
-                    importBtn.className = 'bg-white dark:bg-dark-surface hover:bg-slate-50 dark:hover:bg-slate-700/50 text-slate-600 dark:text-slate-300 border border-slate-200 dark:border-slate-700 px-4 py-2 rounded-lg text-sm font-medium transition-all shadow-sm flex items-center gap-2';
+                    importBtn.className = 'bg-white dark:bg-dark-surface hover:bg-slate-50 dark:hover:bg-slate-700/50 text-slate-600 dark:text-slate-300 border border-slate-200 dark:border-slate-700 px-4 py-2 rounded-lg text-sm font-medium transition-all shadow-sm flex items-center justify-center gap-2';
                 } else {
                     // Erster Klick -> Warnung
                     const originalHtml = importBtn.innerHTML;
                     const originalClasses = importBtn.className;
+                    const originalWidth = importBtn.offsetWidth; // Capture current width
 
                     importBtn.dataset.confirmState = 'active';
-                    importBtn.innerHTML = '<i class="fa-solid fa-triangle-exclamation"></i> <span>Überschreiben?</span>';
-                    importBtn.className = 'bg-red-50 dark:bg-red-900/20 text-red-600 dark:text-red-400 border border-red-200 dark:border-red-800 px-4 py-2 rounded-lg text-sm font-medium transition-all shadow-sm flex items-center gap-2';
+                    importBtn.style.width = `${originalWidth}px`; // Lock width
+                    importBtn.innerHTML = '<i class="fa-solid fa-check"></i> <span>Sicher?</span>'; // Shortened text to fit better
+                    importBtn.className = 'bg-red-50 dark:bg-red-900/20 text-red-600 dark:text-red-400 border border-red-200 dark:border-red-800 px-4 py-2 rounded-lg text-sm font-medium transition-all shadow-sm flex items-center justify-center gap-2';
 
                     setTimeout(() => {
                         if (importBtn.dataset.confirmState === 'active') {
                             importBtn.dataset.confirmState = 'inactive';
+                            importBtn.style.width = ''; // Unlock width
                             importBtn.innerHTML = originalHtml;
                             importBtn.className = originalClasses;
                         }
