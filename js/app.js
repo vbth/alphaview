@@ -539,21 +539,13 @@ function initCopyFeatures() {
 
             items.sort((a, b) => b.valEur - a.valEur);
 
-            let text = "### AI ANALYSIS CONTEXT (PORTFOLIO)\n\n";
-            text += "| Asset | Symbol | Weight | Perf 1Y | Volatility | Trend | Research |\n";
-            text += "| :--- | :--- | :--- | :--- | :--- | :--- | :--- |\n";
+            let text = "| Asset | Symbol | Weight | Perf | Volatility | Trend |\n";
+            text += "| :--- | :--- | :--- | :--- | :--- | :--- |\n";
 
             items.forEach(i => {
                 const percent = (i.valEur / totalValueEUR) * 100;
-                const safeSymbol = i.symbol.split('.')[0].toLowerCase();
-                const marketWatchUrl = (i.type === 'ETF' || i.type === 'MUTUALFUND')
-                    ? `https://www.marketwatch.com/investing/fund/${safeSymbol}`
-                    : `https://www.marketwatch.com/investing/stock/${safeSymbol}`;
-
-                text += `| ${i.name} | ${i.symbol} | ${percent.toFixed(1)}% | ${i.changePercent.toFixed(1)}% | ${i.volatility.toFixed(1)}% | ${i.trend.toUpperCase()} | [MW](${marketWatchUrl}) |\n`;
+                text += `| ${i.name} | ${i.symbol} | ${percent.toFixed(1)}% | ${i.changePercent.toFixed(1)}% | ${i.volatility.toFixed(1)}% | ${i.trend.toUpperCase()} |\n`;
             });
-
-            text += "\n> [!NOTE]\n> Prices and absolute portfolio values are excluded for privacy.";
 
             navigator.clipboard.writeText(text).then(() => {
                 const originalText = copyBtn.innerHTML;

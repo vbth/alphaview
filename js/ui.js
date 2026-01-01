@@ -265,7 +265,7 @@ function renderCardFooter(data, isUp) {
                 <span class="text-slate-300 dark:text-slate-600">•</span>
                 <div>Volatilität ${data.volatility.toFixed(1)}%</div>
             </div>
-            <button class="delete-btn dashboard-action text-slate-400 hover:text-red-500 transition-colors flex items-center gap-1.5 px-2 py-1 hover:bg-red-50 dark:hover:bg-red-900/20 rounded" data-symbol="${data.symbol}" data-action="delete" title="Entfernen">
+            <button type="button" class="delete-btn dashboard-action text-slate-400 hover:text-red-500 transition-colors flex items-center gap-1.5 px-2 py-1 hover:bg-red-50 dark:hover:bg-red-900/20 rounded" data-symbol="${data.symbol}" data-action="delete" title="Entfernen">
                 <i class="fa-solid fa-trash-can"></i> Entfernen
             </button>
         </div>
@@ -291,7 +291,7 @@ export function createErrorCardHTML(symbol, msg) {
                 <div class="text-[10px] font-mono mt-1 text-red-400 break-words">${msg || 'Timeout / Network Error'}</div>
             </div>
             <div class="mt-4 border-t border-red-100 dark:border-red-800/50 pt-3 flex justify-between items-end">
-                 <button class="delete-btn dashboard-action text-red-400 hover:text-red-600 transition-colors flex items-center gap-1.5 px-2 py-1 hover:bg-red-100 dark:hover:bg-red-900/30 rounded text-xs" data-symbol="${symbol}" data-action="delete">
+                 <button type="button" class="delete-btn dashboard-action text-red-400 hover:text-red-600 transition-colors flex items-center gap-1.5 px-2 py-1 hover:bg-red-100 dark:hover:bg-red-900/30 rounded text-xs" data-symbol="${symbol}" data-action="delete">
                     <i class="fa-solid fa-trash-can"></i> Entfernen
                 </button>
                 <a href="https://finance.yahoo.com/quote/${symbol}" target="_blank" class="text-red-400 hover:text-red-600 text-xs flex items-center gap-1">
