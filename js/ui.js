@@ -330,7 +330,7 @@ export function renderDashboardList(data, container, eurUsdRate) {
         const weight = totalEUR > 0 ? (positionValueEUR / totalEUR) * 100 : 0;
 
         html += `
-        <div class="grid grid-cols-12 gap-2 px-6 py-3 border-b border-slate-100 dark:border-slate-800 last:border-0 hover:bg-slate-50 dark:hover:bg-slate-700/30 transition-colors items-center group stock-card" data-symbol="${item.symbol}">
+        <div class="list-row grid grid-cols-12 gap-2 px-6 py-3 border-b border-slate-100 dark:border-slate-800 last:border-0 hover:bg-slate-50 dark:hover:bg-slate-700/30 transition-colors items-center group cursor-pointer" data-symbol="${item.symbol}">
             <div class="col-span-3 min-w-0">
                  <div class="font-bold text-slate-900 dark:text-white truncate" title="${item.name}">${item.name}</div>
                  <div class="text-[10px] md:text-xs font-mono text-slate-500 flex gap-2">

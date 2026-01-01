@@ -298,7 +298,7 @@ function initDashboardEvents() {
         }
 
         // Klicks auf Karten (Modal), aber nicht auf Inputs/Links
-        const card = target.closest('.stock-card');
+        const card = target.closest('.stock-card, .list-row');
         if (card && !target.closest('input') && !target.closest('a') && !target.closest('button')) {
             openModal(card.dataset.symbol);
         }
