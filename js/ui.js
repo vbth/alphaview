@@ -325,6 +325,8 @@ export function renderDashboardList(data, container, eurUsdRate) {
             ? `https://www.marketwatch.com/investing/fund/${safeSymbol}`
             : `https://www.marketwatch.com/investing/stock/${safeSymbol}`;
 
+        const weight = totalEUR > 0 ? (positionValueEUR / totalEUR) * 100 : 0;
+
         html += `
         <div class="grid grid-cols-12 gap-2 px-6 py-4 border-b border-slate-100 dark:border-slate-800 last:border-0 hover:bg-slate-50 dark:hover:bg-slate-700/30 transition-colors items-center group stock-card" data-symbol="${item.symbol}">
             <div class="col-span-3 min-w-0">
