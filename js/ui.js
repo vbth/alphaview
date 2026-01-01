@@ -366,12 +366,10 @@ export function renderDashboardList(data, container, eurUsdRate) {
         </div>`;
     });
 
-});
-
-html += `   </div>
+    html += `   </div>
              </div>`; // Close min-w wrapper and overflow-x wrapper
 
-container.innerHTML = html;
+    container.innerHTML = html;
 }
 
 /**
