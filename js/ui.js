@@ -229,11 +229,17 @@ function renderCardInfoBox(data, qty, url, extraUrl, positionValueNative, weight
             <div class="flex items-center gap-2">
                 <i class="fa-solid fa-layer-group text-slate-400 text-xs"></i>
                 <label class="text-xs text-slate-600 dark:text-slate-400">Stück</label>
-                <span class="ml-1 text-[10px] bg-slate-200 dark:bg-slate-700 text-slate-600 dark:text-slate-300 px-1.5 py-0.5 rounded font-mono">
-                    ${weightPercent.toFixed(2).replace('.', ',')}%
-                </span>
             </div>
             <input type="number" min="0" step="any" class="qty-input dashboard-action w-24 text-right text-sm bg-white dark:bg-slate-700 border border-slate-200 dark:border-slate-600 rounded px-2 py-1 focus:ring-2 focus:ring-primary outline-none" value="${qty}" data-symbol="${data.symbol}" data-action="qty" placeholder="0">
+        </div>
+        <div class="flex justify-between items-center mb-2">
+            <div class="flex items-center gap-2">
+                <i class="fa-solid fa-chart-pie text-slate-400 text-xs"></i>
+                <label class="text-xs text-slate-600 dark:text-slate-400">Anteil</label>
+            </div>
+            <div class="font-mono text-xs text-slate-900 dark:text-white">
+                ${weightPercent.toFixed(2).replace('.', ',')}%
+            </div>
         </div>`;
 
     return `
@@ -291,13 +297,14 @@ export function renderDashboardList(data, container, eurUsdRate) {
 
     // Header
     let html = `
-        <div class="grid grid-cols-12 gap-4 px-6 py-3 bg-slate-50 dark:bg-slate-800/50 border-b border-slate-200 dark:border-slate-700 text-xs font-bold text-slate-500 uppercase tracking-wider">
-            <div class="col-span-4 md:col-span-3">Wertpapier</div>
-            <div class="col-span-2 text-right">Preis</div>
-            <div class="col-span-2 text-right">Performance</div>
-            <div class="col-span-2 text-right">Wert</div>
-            <div class="col-span-2 md:col-span-1 text-right">Stück</div>
-            <div class="col-span-2 text-right hidden md:block">Aktion</div>
+        <div class="grid grid-cols-12 gap-2 px-6 py-3 bg-slate-50 dark:bg-slate-800/50 border-b border-slate-200 dark:border-slate-700 text-xs font-bold text-slate-500 uppercase tracking-wider">
+            <div class="col-span-3 text-left"><i class="fa-solid fa-layer-group"></i> Wertpapier</div>
+            <div class="col-span-2 text-right"><i class="fa-solid fa-tag"></i> Preis</div>
+            <div class="col-span-2 text-right"><i class="fa-solid fa-chart-line"></i> Perf.</div>
+            <div class="col-span-2 text-right"><i class="fa-solid fa-coins"></i> Wert</div>
+            <div class="col-span-1 text-right"><i class="fa-solid fa-hashtag"></i> Stück</div>
+            <div class="col-span-1 text-right"><i class="fa-solid fa-chart-pie"></i> Ant.</div>
+            <div class="col-span-1 text-right hidden md:block"><i class="fa-solid fa-bolt"></i></div>
         </div>
     `;
 
@@ -317,8 +324,8 @@ export function renderDashboardList(data, container, eurUsdRate) {
             : `https://www.marketwatch.com/investing/stock/${safeSymbol}`;
 
         html += `
-        <div class="grid grid-cols-12 gap-4 px-6 py-4 border-b border-slate-100 dark:border-slate-800 last:border-0 hover:bg-slate-50 dark:hover:bg-slate-700/30 transition-colors items-center group stock-card" data-symbol="${item.symbol}">
-            <div class="col-span-4 md:col-span-3 min-w-0">
+        <div class="grid grid-cols-12 gap-2 px-6 py-4 border-b border-slate-100 dark:border-slate-800 last:border-0 hover:bg-slate-50 dark:hover:bg-slate-700/30 transition-colors items-center group stock-card" data-symbol="${item.symbol}">
+            <div class="col-span-3 min-w-0">
                  <div class="font-bold text-slate-900 dark:text-white truncate" title="${item.name}">${item.name}</div>
                  <div class="text-xs font-mono text-slate-500 flex gap-2">
                     <span>${item.symbol}</span>
@@ -338,11 +345,15 @@ export function renderDashboardList(data, container, eurUsdRate) {
                 ${formatMoney(positionValueNative, item.currency)}
             </div>
 
-            <div class="col-span-2 md:col-span-1 flex justify-end">
-                <input type="number" min="0" step="any" class="qty-input dashboard-action w-20 text-right text-xs bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-600 rounded px-1.5 py-1 focus:ring-1 focus:ring-primary outline-none" value="${item.qty}" data-symbol="${item.symbol}" data-action="qty" onclick="event.stopPropagation()">
+            <div class="col-span-1 flex justify-end">
+                <input type="number" min="0" step="any" class="qty-input dashboard-action w-16 text-right text-xs bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-600 rounded px-1.5 py-1 focus:ring-1 focus:ring-primary outline-none" value="${item.qty}" data-symbol="${item.symbol}" data-action="qty" onclick="event.stopPropagation()">
+            </div>
+            
+            <div class="col-span-1 text-right font-mono text-xs text-slate-500">
+                ${weight.toFixed(1)}%
             </div>
 
-            <div class="col-span-2 text-right hidden md:flex justify-end gap-2">
+            <div class="col-span-1 text-right flex justify-end gap-2">
                 <button type="button" class="delete-btn dashboard-action text-slate-400 hover:text-red-500 transition-colors px-2 py-1 rounded hover:bg-red-50 dark:hover:bg-red-900/20" data-symbol="${item.symbol}" data-action="delete" title="Entfernen">
                     <i class="fa-solid fa-trash-can"></i>
                 </button>

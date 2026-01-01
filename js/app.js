@@ -233,7 +233,7 @@ function renderDashboardGrid() {
     if (totalPosEl) totalPosEl.textContent = state.dashboardData.length;
 
     if (state.viewMode === 'list') {
-        renderDashboardList(preparedData, gridEl, state.eurUsdRate);
+        renderDashboardList(preparedData, gridEl, state.eurUsdRate, totalEUR);
     } else {
         gridEl.innerHTML = preparedData.map(data => {
             if (data.error) return createErrorCardHTML(data.symbol, data.errorMsg);
