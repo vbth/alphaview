@@ -295,79 +295,84 @@ function renderCardFooter(data, isUp) {
  * @param {number} eurUsdRate - Wechselkurs.
  */
 export function renderDashboardList(data, container, eurUsdRate) {
-    container.className = 'flex flex-col gap-0 bg-white dark:bg-dark-surface rounded-xl shadow-sm border border-slate-200 dark:border-slate-700 overflow-hidden';
+    container.className = 'flex flex-col bg-white dark:bg-dark-surface rounded-xl shadow-sm border border-slate-200 dark:border-slate-700 overflow-hidden';
 
-    // Header
+    // Start wrapper
     let html = `
     <div class="overflow-x-auto w-full">
-        <div class="min-w-[800px]">
-            <div class="grid grid-cols-12 gap-2 px-6 py-3 bg-slate-50 dark:bg-slate-800/50 border-b border-slate-200 dark:border-slate-700 text-xs font-bold text-slate-500 uppercase tracking-wider">
-                <div class="col-span-3 text-left"><i class="fa-solid fa-layer-group"></i> Wertpapier</div>
-                <div class="col-span-2 text-right"><i class="fa-solid fa-tag"></i> Preis</div>
-                <div class="col-span-2 text-right"><i class="fa-solid fa-chart-line"></i> Perf.</div>
-                <div class="col-span-2 text-right"><i class="fa-solid fa-coins"></i> Wert</div>
-                <div class="col-span-1 text-right"><i class="fa-solid fa-hashtag"></i> Stück</div>
-                <div class="col-span-1 text-right"><i class="fa-solid fa-chart-pie"></i> Ant.</div>
-                <div class="col-span-1 text-right"><i class="fa-solid fa-bolt"></i></div>
-            </div>
+        <table class="w-full text-left border-collapse min-w-[800px]">
+            <thead class="bg-slate-50 dark:bg-slate-800/50 border-b border-slate-200 dark:border-slate-700">
+                <tr class="text-xs font-bold text-slate-500 uppercase tracking-wider">
+                    <th class="px-6 py-3"><i class="fa-solid fa-layer-group"></i> Wertpapier</th>
+                    <th class="px-6 py-3 text-right"><i class="fa-solid fa-tag"></i> Preis</th>
+                    <th class="px-6 py-3 text-right"><i class="fa-solid fa-chart-line"></i> Perf.</th>
+                    <th class="px-6 py-3 text-right"><i class="fa-solid fa-coins"></i> Wert</th>
+                    <th class="px-6 py-3 text-right"><i class="fa-solid fa-hashtag"></i> Stück</th>
+                    <th class="px-6 py-3 text-right"><i class="fa-solid fa-chart-pie"></i> Ant.</th>
+                    <th class="px-6 py-3 text-right"><i class="fa-solid fa-bolt"></i></th>
+                </tr>
+            </thead>
+            <tbody class="divide-y divide-slate-100 dark:divide-slate-800">
     `;
 
     // Rows
     data.forEach(item => {
-        if (item.error) return; // Errors handled separately/ignored in list for now or appended bottom
+        if (item.error) return;
 
         const isUp = item.change >= 0;
         const colorClass = isUp ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400';
         const positionValueNative = item.price * item.qty;
         let positionValueEUR = (item.currency === 'USD') ? positionValueNative / eurUsdRate : positionValueNative;
 
-        // MarketWatch Link
         const safeSymbol = item.symbol.split('.')[0].toLowerCase();
-        const mwUrl = (item.type === 'ETF' || item.type === 'MUTUALFUND')
-            ? `https://www.marketwatch.com/investing/fund/${safeSymbol}`
-            : `https://www.marketwatch.com/investing/stock/${safeSymbol}`;
+        // MarketWatch removed as per previous pref, just ensuring standard row
 
         const weight = totalEUR > 0 ? (positionValueEUR / totalEUR) * 100 : 0;
 
         html += `
-        <div class="list-row grid grid-cols-12 gap-2 px-6 py-3 border-b border-slate-100 dark:border-slate-800 last:border-0 hover:bg-slate-50 dark:hover:bg-slate-700/30 transition-colors items-center group cursor-pointer" data-symbol="${item.symbol}">
-            <div class="col-span-3 min-w-0">
+        <tr class="list-row hover:bg-slate-50 dark:hover:bg-slate-700/30 transition-colors group cursor-pointer" data-symbol="${item.symbol}">
+            <td class="px-6 py-4 max-w-[200px]">
                  <div class="font-bold text-slate-900 dark:text-white truncate" title="${item.name}">${item.name}</div>
-                 <div class="text-[10px] md:text-xs font-mono text-slate-500 flex gap-2">
-                    <span class="truncate">${item.symbol}</span>
-                 </div>
-            </div>
+                 <div class="text-xs font-mono text-slate-500 truncate">${item.symbol}</div>
+            </td>
             
-            <div class="col-span-2 text-right font-mono text-sm text-slate-700 dark:text-slate-300">
+            <td class="px-6 py-4 text-right font-mono text-sm text-slate-700 dark:text-slate-300 whitespace-nowrap">
                 ${formatMoney(item.price, item.currency)}
-            </div>
+            </td>
 
-            <div class="col-span-2 text-right font-mono text-sm font-medium ${colorClass}">
+            <td class="px-6 py-4 text-right font-mono text-sm font-medium ${colorClass} whitespace-nowrap">
                 ${formatPercent(item.changePercent)}
-            </div>
+            </td>
 
-            <div class="col-span-2 text-right font-mono font-bold text-slate-900 dark:text-white text-sm">
+            <div class="hidden"></div><!-- Fix for potential parser quirks with template literals inside TR? No, standards allow. -->
+
+            <td class="px-6 py-4 text-right font-mono font-bold text-slate-900 dark:text-white text-sm whitespace-nowrap">
                 ${formatMoney(positionValueNative, item.currency)}
-            </div>
+            </td>
 
-            <div class="col-span-1 flex justify-end">
-                <input type="number" min="0" step="any" class="qty-input dashboard-action w-16 text-right text-xs bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-600 rounded px-1 py-1 focus:ring-1 focus:ring-primary outline-none" value="${item.qty}" data-symbol="${item.symbol}" data-action="qty" onclick="event.stopPropagation()">
-            </div>
+            <td class="px-6 py-4 text-right">
+                <div class="flex justify-end">
+                    <input type="number" min="0" step="any" class="qty-input dashboard-action w-16 text-right text-xs bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-600 rounded px-1 py-1 focus:ring-1 focus:ring-primary outline-none" value="${item.qty}" data-symbol="${item.symbol}" data-action="qty" onclick="event.stopPropagation()">
+                </div>
+            </td>
             
-            <div class="col-span-1 text-right font-mono text-xs text-slate-500">
+            <td class="px-6 py-4 text-right font-mono text-xs text-slate-500 whitespace-nowrap">
                 ${weight.toFixed(1)}%
-            </div>
+            </td>
 
-            <div class="col-span-1 text-right flex justify-end gap-2">
-                <button type="button" class="delete-btn dashboard-action text-slate-400 hover:text-red-500 transition-colors px-2 py-1 rounded hover:bg-red-50 dark:hover:bg-red-900/20" data-symbol="${item.symbol}" data-action="delete" title="Entfernen">
-                    <i class="fa-solid fa-trash-can"></i>
-                </button>
-            </div>
-        </div>`;
+            <td class="px-6 py-4 text-right">
+                <div class="flex justify-end gap-2">
+                    <button type="button" class="delete-btn dashboard-action text-slate-400 hover:text-red-500 transition-colors px-2 py-1 rounded hover:bg-red-50 dark:hover:bg-red-900/20" data-symbol="${item.symbol}" data-action="delete" title="Entfernen">
+                        <i class="fa-solid fa-trash-can"></i>
+                    </button>
+                </div>
+            </td>
+        </tr>`;
     });
 
-    html += `   </div>
-             </div>`; // Close min-w wrapper and overflow-x wrapper
+    html += `   </tbody>
+             </table>
+           </div>`;
 
     container.innerHTML = html;
 }
