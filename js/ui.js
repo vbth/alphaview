@@ -258,7 +258,13 @@ function renderCardInfoBox(data, qty, url, extraUrl, positionValueNative, weight
     return `
         <div class="bg-slate-50 dark:bg-slate-800/50 rounded-lg p-3 mb-4 border border-slate-100 dark:border-slate-700" onclick="event.stopPropagation()">
             ${valueRow}
-            ${qtyRow}
+            
+            <div class="flex justify-between items-center text-sm mb-2">
+                <span class="text-slate-500 dark:text-slate-400 flex items-center gap-1.5"><i class="fa-solid fa-cubes text-slate-400 w-4 text-center"></i> Stück</span>
+                <div class="font-mono font-medium text-slate-700 dark:text-slate-300 flex items-center gap-2">
+                    <input type="number" min="0" step="any" class="qty-input dashboard-action w-20 text-right bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-600 rounded px-1.5 py-0.5 focus:ring-1 focus:ring-primary outline-none" value="${qty}" data-symbol="${escapeHTML(data.symbol)}" data-action="qty">
+                </div>
+            </div>
 
             <div class="flex items-center gap-2 pt-1">
                 <i class="fa-solid fa-link text-slate-400 text-xs"></i>
@@ -293,7 +299,7 @@ function renderCardFooter(data, isUp) {
                 ` : '<span></span>'}
             </div >
     <button type="button" class="delete-btn dashboard-action text-slate-400 hover:text-red-500 transition-colors flex items-center gap-1.5 px-2 py-1 hover:bg-red-50 dark:hover:bg-red-900/20 rounded text-xs" data-symbol="${escapeHTML(data.symbol)}" data-action="delete" title="Entfernen">
-        <i class="fa-solid fa-trash-can"></i> Entfernen
+        <i class="fa-solid fa-trash-can"></i>
     </button>
         </div >
     `;
@@ -315,11 +321,11 @@ export function renderDashboardList(data, container, eurUsdRate, totalEUR) {
             <thead class="bg-slate-50 dark:bg-slate-800/50 border-b border-slate-200 dark:border-slate-700">
                 <tr class="text-xs font-bold text-slate-500 uppercase tracking-wider">
                     <th class="px-6 py-3"><i class="fa-solid fa-layer-group"></i> Wertpapier</th>
+                    <th class="px-6 py-3 text-right"><i class="fa-solid fa-cubes"></i> Stück</th>
                     <th class="px-6 py-3 text-right"><i class="fa-solid fa-tag"></i> Preis</th>
-                    <th class="px-6 py-3 text-right"><i class="fa-solid fa-chart-line"></i> Perf.</th>
                     <th class="px-6 py-3 text-right"><i class="fa-solid fa-coins"></i> Wert</th>
+                    <th class="px-6 py-3 text-right"><i class="fa-solid fa-chart-line"></i> Perf.</th>
                     <th class="px-6 py-3 text-right"><i class="fa-solid fa-chart-pie"></i> Anteil</th>
-                    <th class="px-6 py-3 text-right"><i class="fa-solid fa-hashtag"></i> Stück</th>
                     <th class="px-6 py-3 text-right"><i class="fa-solid fa-bolt"></i></th>
                 </tr>
             </thead>
@@ -339,30 +345,28 @@ export function renderDashboardList(data, container, eurUsdRate, totalEUR) {
         // MarketWatch removed as per previous pref, just ensuring standard row
 
         const weight = totalEUR > 0 ? (positionValueEUR / totalEUR) * 100 : 0;
+        const weightStr = weight.toFixed(1).replace('.', ',') + ' %';
+
+        // Badges for List View
+        const rawStyle = ASSET_TYPES[item.type] || DEFAULT_ASSET_STYLE;
+        const badge = {
+            label: rawStyle.label || item.type || 'OTHER',
+            color: rawStyle.color || DEFAULT_ASSET_STYLE.color
+        };
 
         html += `
                 <tr class="list-row hover:bg-slate-50 dark:hover:bg-slate-700/30 transition-colors group cursor-pointer" data-symbol="${escapeHTML(item.symbol)}">
-                    <td class="px-6 py-4 max-w-[200px]">
-                        <div class="font-bold text-slate-900 dark:text-white truncate" title="${escapeHTML(item.name)}">${escapeHTML(item.name)}</div>
-                        <div class="text-xs font-mono text-slate-500 truncate">${escapeHTML(item.symbol)}</div>
-                    </td>
-
-                    <td class="px-6 py-4 text-right font-mono text-sm text-slate-700 dark:text-slate-300 whitespace-nowrap">
-                        ${formatMoney(item.price, item.currency)}
-                    </td>
-
-                    <td class="px-6 py-4 text-right font-mono text-sm font-medium ${colorClass} whitespace-nowrap">
-                        ${formatPercent(item.changePercent)}
-                    </td>
-
-                    <div class="hidden"></div><!-- Fix for potential parser quirks with template literals inside TR? No, standards allow. -->
-
-                    <td class="px-6 py-4 text-right font-mono font-bold text-slate-900 dark:text-white text-sm whitespace-nowrap">
-                        ${formatMoney(positionValueNative, item.currency)}
-                    </td>
-
-                    <td class="px-6 py-4 text-right font-mono text-xs text-slate-500 whitespace-nowrap">
-                        ${weight.toFixed(1)}%
+                    <td class="px-6 py-4 max-w-[250px]">
+                        <div class="flex items-start gap-2">
+                             <div>
+                                <div class="font-bold text-slate-900 dark:text-white truncate" title="${escapeHTML(item.name)}">${escapeHTML(item.name)}</div>
+                                <div class="flex items-center gap-2 mt-0.5">
+                                    <span class="${badge.color} px-1.5 py-0.5 rounded border text-[9px] font-bold tracking-wide leading-none">${escapeHTML(badge.label)}</span>
+                                    <span class="text-xs font-mono text-slate-400 bg-slate-100 dark:bg-slate-800 px-1 py-0.5 rounded leading-none">${escapeHTML(item.exchange)}</span>
+                                    <span class="text-xs font-mono text-slate-500 truncate leading-none">${escapeHTML(item.symbol)}</span>
+                                </div>
+                             </div>
+                        </div>
                     </td>
 
                     <td class="px-6 py-4 text-right">
@@ -371,9 +375,25 @@ export function renderDashboardList(data, container, eurUsdRate, totalEUR) {
                         </div>
                     </td>
 
+                    <td class="px-6 py-4 text-right font-mono text-sm text-slate-700 dark:text-slate-300 whitespace-nowrap">
+                        ${formatMoney(item.price, item.currency)}
+                    </td>
+
+                     <td class="px-6 py-4 text-right font-mono font-bold text-slate-900 dark:text-white text-sm whitespace-nowrap">
+                        ${formatMoney(positionValueNative, item.currency)}
+                    </td>
+
+                    <td class="px-6 py-4 text-right font-mono text-sm font-medium ${colorClass} whitespace-nowrap">
+                        ${formatPercent(item.changePercent)}
+                    </td>
+
+                    <td class="px-6 py-4 text-right font-mono text-xs text-slate-500 whitespace-nowrap">
+                        ${weightStr}
+                    </td>
+
                     <td class="px-6 py-4 text-right">
                         <div class="flex justify-end gap-2">
-                            <button type="button" class="delete-btn dashboard-action text-slate-400 hover:text-red-500 transition-colors px-2 py-1 rounded hover:bg-red-50 dark:hover:bg-red-900/20" data-symbol="${escapeHTML(item.symbol)}" data-action="delete" title="Entfernen">
+                             <button type="button" class="delete-btn dashboard-action text-slate-400 hover:text-red-500 transition-colors px-2 py-1 rounded hover:bg-red-50 dark:hover:bg-red-900/20" data-symbol="${escapeHTML(item.symbol)}" data-action="delete" title="Entfernen">
                                 <i class="fa-solid fa-trash-can"></i>
                             </button>
                         </div>
@@ -408,7 +428,7 @@ export function createErrorCardHTML(symbol, msg) {
             </div>
             <div class="mt-4 border-t border-red-100 dark:border-red-800/50 pt-3 flex justify-between items-end">
                  <button type="button" class="delete-btn dashboard-action text-red-400 hover:text-red-600 transition-colors flex items-center gap-1.5 px-2 py-1 hover:bg-red-100 dark:hover:bg-red-900/30 rounded text-xs" data-symbol="${escapeHTML(symbol)}" data-action="delete">
-                    <i class="fa-solid fa-trash-can"></i> Entfernen
+                    <i class="fa-solid fa-trash-can"></i>
                 </button>
                 <button type="button" class="dashboard-action text-red-500 hover:text-red-700 bg-red-100 dark:bg-red-900/40 hover:bg-red-200 dark:hover:bg-red-900/60 transition-colors flex items-center gap-1.5 px-3 py-1 rounded text-xs font-bold" data-symbol="${escapeHTML(symbol)}" data-action="retry">
                     <i class="fa-solid fa-rotate-right"></i> Retry
@@ -439,14 +459,17 @@ export function renderSearchResults(results, container) {
 
         return `
     <div class="search-item px-4 py-3 hover:bg-slate-50 dark:hover:bg-slate-700/50 cursor-pointer border-b border-slate-100 dark:border-slate-700 last:border-0 transition-colors group" data-symbol="${escapeHTML(item.symbol)}">
-        <div class="flex justify-between items-center">
+        <div class="flex justify-between items-start">
             <div class="flex-grow min-w-0 mr-4">
-                <div class="flex items-center gap-2 mb-0.5"><span class="font-bold text-slate-900 dark:text-white text-sm whitespace-nowrap">${escapeHTML(item.symbol)}</span><span class="text-[10px] font-bold px-1.5 py-0.5 rounded ${badge.color}">${escapeHTML(badge.label)}</span></div>
-                <div class="text-xs text-slate-500 truncate" title="${escapeHTML(item.name)}">${escapeHTML(item.name)}</div>
+                <div class="text-sm font-bold text-slate-900 dark:text-white truncate mb-1" title="${escapeHTML(item.name)}">${escapeHTML(item.name)}</div>
+                <div class="text-xs font-mono text-slate-500">${escapeHTML(item.symbol)}</div>
             </div>
-            <div class="text-xs font-mono bg-slate-100 dark:bg-slate-700 text-slate-500 px-2 py-1 rounded whitespace-nowrap group-hover:bg-white dark:group-hover:bg-slate-600 transition-colors">${escapeHTML(item.exchange)}</div>
+            <div class="flex flex-col items-end gap-1">
+                <span class="text-[10px] font-bold px-1.5 py-0.5 rounded ${badge.color}">${escapeHTML(badge.label)}</span>
+                <div class="text-[10px] font-mono bg-slate-100 dark:bg-slate-700 text-slate-500 px-1.5 py-0.5 rounded whitespace-nowrap group-hover:bg-white dark:group-hover:bg-slate-600 transition-colors">${escapeHTML(item.exchange)}</div>
+            </div>
         </div>
-        </div>
+    </div>
     `}).join('');
     container.classList.remove('hidden');
 }
