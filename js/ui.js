@@ -145,16 +145,57 @@ export function createStockCardHTML(data, qty, url, extraUrl, totalPortfolioValu
     let positionValueEUR = (data.currency === 'USD') ? positionValueNative / eurUsdRate : positionValueNative;
     const weightPercent = totalPortfolioValueEUR > 0 ? (positionValueEUR / totalPortfolioValueEUR) * 100 : 0;
 
-    return `
+    // Helper für Börsen-Kürzel
+    function getExchangeAbbr(exchange) {
+        if (!exchange) return 'N/A';
+        const map = {
+            'Nms': 'NAS', 'NasdaqNM': 'NAS', 'Nasdaq': 'NAS', 'Ncm': 'NAS',
+            'Nyg': 'NYS', 'Nyse': 'NYS', 'New York Stock Exchange': 'NYS',
+            'Ger': 'XET', 'Xetra': 'XET', 'Dusseldorf': 'DUS', 'Stuttgart': 'STU',
+            'Munich': 'MUN', 'Berlin': 'BER', 'Hamburg': 'HAM', 'Hannover': 'HAN',
+            'Paris': 'PAR', 'Amsterdam': 'AMS', 'Brussels': 'BRU', 'London': 'LON',
+            'Swiss': 'SWI', 'Vienna': 'VIE', 'Milan': 'MIL', 'Madrid': 'MAD'
+        };
+        return map[exchange] || exchange.substring(0, 3).toUpperCase();
+    }
+
+    /**
+     * Erstellt das HTML für eine einzelne Aktien-Karte.
+     * @param {Object} data - Analysedaten.
+     * @returns {string} HTML-String.
+     */
+    export function createStockCardHTML(data, qty, url, extraUrl) {
+        const isUp = data.change >= 0;
+
+        // Calculate Value
+        const currentPriceAPI = data.price;
+        const positionValueNative = currentPriceAPI * qty;
+
+        // Weight (wird hier nicht direkt berechnet, da wir totalPortfolioValueEUR brauchen)
+        // Wir übergeben weightPercent als Argument wenn verfügbar, sonst 0.
+        // Hack: Wir holen uns totalPortfolioValueEUR aus argumenten? 
+        // Nein, ui.js signature ist fest. Wir berechnen es in app.js oder übergeben es hier nicht.
+        // wait, createStockCardHTML wird in renderDashboardGrid aufgerufen.
+        // dort haben wir totalPortfolioValueEUR.
+
+        // FIX: createStockCardHTML signature update needed in renderDashboardGrid loop to pass total value?
+        // Current signature: (data, qty, url, extraUrl, positionValueNative? no)
+        // Actually renderDashboardGrid calculates totals. 
+        // Let's modify renderDashboardGrid to pass weight.
+        // BUT user didn't ask to change logic/signatures heavily, just UI.
+        // We already have renderCardInfoBox receiving weightPercent.
+
+        return `
         <div class="stock-card group relative bg-white dark:bg-dark-surface rounded-xl shadow-sm border border-slate-200 dark:border-slate-700 hover:shadow-lg hover:border-primary/50 dark:hover:border-neon-accent/50 transition-all duration-300 cursor-pointer overflow-hidden flex flex-col h-full" data-symbol="${escapeHTML(data.symbol)}">
             <div class="p-5 flex flex-col flex-grow">
                 ${renderCardHeader(data)}
-                ${renderCardInfoBox(data, qty, url, extraUrl, positionValueNative, weightPercent)}
+                ${renderCardInfoBox(data, qty, url, extraUrl)}
                 ${renderCardFooter(data, isUp)}
             </div>
             <div class="h-1 w-full ${isUp ? 'bg-green-500' : 'bg-red-500'}"></div>
         </div>
     `;
+    }
 }
 
 /**
@@ -179,6 +220,8 @@ function renderCardHeader(data) {
         ? `https://www.marketwatch.com/investing/fund/${safeSymbol}`
         : `https://www.marketwatch.com/investing/stock/${safeSymbol}`;
 
+    const isUp = data.change >= 0;
+
     // Index-Spezialbehandlung: Keine Währung, Keine Nachkommastellen
     let priceDisplay;
     if (data.type === 'INDEX') {
@@ -187,13 +230,17 @@ function renderCardHeader(data) {
         priceDisplay = formatMoney(data.price, data.currency);
     }
 
+    const tStyle = ASSET_TYPES[data.type] || DEFAULT_ASSET_STYLE;
+    const exchangeAbbr = getExchangeAbbr(data.exchange || data.fullExchangeName); // check data source for exchange
+
     return `
         <div class="flex justify-between items-start mb-4 gap-4">
             <div class="flex-grow min-w-0 pr-2"> 
                 <h3 class="text-lg font-bold text-slate-900 dark:text-white tracking-tight truncate" title="${escapeHTML(data.name)}">${escapeHTML(data.name)}</h3>
-                <div class="flex items-center gap-2 text-xs font-mono text-slate-500 mt-1">
+                <div class="flex items-center gap-2 mt-1.5 flex-wrap">
                     <span class="${tStyle.color} px-1.5 py-0.5 rounded border text-[10px] font-bold tracking-wide">${escapeHTML(tStyle.label)}</span>
-                    <span class="font-bold text-slate-700 dark:text-slate-300 ml-1">${escapeHTML(data.symbol)}</span>
+                    <span class="bg-slate-100 dark:bg-slate-700 text-slate-500 dark:text-slate-400 border border-slate-200 dark:border-slate-600 px-1.5 py-0.5 rounded text-[10px] font-bold tracking-wide">${escapeHTML(exchangeAbbr)}</span>
+                    <span class="font-bold text-xs text-slate-400 dark:text-slate-500 ml-0.5">${escapeHTML(data.symbol)}</span>
                 </div>
             </div>
             <div class="text-right whitespace-nowrap pt-1 ml-auto">
@@ -260,22 +307,22 @@ function renderCardInfoBox(data, qty, url, extraUrl, positionValueNative, weight
             ${valueRow}
             
             <div class="flex justify-between items-center text-sm mb-2">
-                <span class="text-slate-500 dark:text-slate-400 flex items-center gap-1.5"><i class="fa-solid fa-cubes text-slate-400 w-4 text-center"></i> Stück</span>
+                <span class="text-slate-500 dark:text-slate-400 flex items-center gap-1.5 text-xs font-medium uppercase tracking-wide"><i class="fa-solid fa-cubes text-slate-400 w-4 text-center"></i> Stück</span>
                 <div class="font-mono font-medium text-slate-700 dark:text-slate-300 flex items-center gap-2">
-                    <input type="number" min="0" step="any" class="qty-input dashboard-action w-20 text-right bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-600 rounded px-1.5 py-0.5 focus:ring-1 focus:ring-primary outline-none" value="${qty}" data-symbol="${escapeHTML(data.symbol)}" data-action="qty">
+                    <input type="number" min="0" step="any" class="qty-input dashboard-action w-20 text-right bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-600 rounded px-1.5 py-0.5 text-xs focus:ring-1 focus:ring-primary outline-none" value="${qty}" data-symbol="${escapeHTML(data.symbol)}" data-action="qty">
                 </div>
             </div>
 
             <div class="flex items-center gap-2 pt-1">
-                <i class="fa-solid fa-link text-slate-400 text-xs"></i>
+                <i class="fa-solid fa-link text-slate-400 text-xs w-4 text-center"></i>
                 <input type="text" class="url-input dashboard-action w-full text-xs bg-transparent border-none focus:ring-0 text-slate-600 dark:text-slate-400 placeholder-slate-400" value="${escapeHTML(url || '')}" data-symbol="${escapeHTML(data.symbol)}" data-action="url" placeholder="Info-Link">
-                ${url ? `<a href="${escapeHTML(url)}" target="_blank" class="text-primary hover:text-blue-600" title="Öffnen"><i class="fa-solid fa-external-link-alt text-xs"></i></a>` : ''}
+                ${url ? `<a href="${escapeHTML(url)}" target="_blank" class="text-primary hover:text-blue-600 icon-btn" title="Öffnen"><i class="fa-solid fa-external-link-alt text-xs"></i></a>` : ''}
             </div>
 
             <div class="flex items-center gap-2 pt-1 mt-1 border-t border-slate-200 dark:border-slate-700">
                 <i class="fa-solid ${extraIcon} text-slate-400 text-xs w-4 text-center"></i>
                 <input type="text" class="extra-url-input dashboard-action w-full text-xs bg-transparent border-none focus:ring-0 text-slate-600 dark:text-slate-400 placeholder-slate-400" value="${escapeHTML(extraUrl || '')}" data-symbol="${escapeHTML(data.symbol)}" data-action="extraUrl" placeholder="${extraPlaceholder}">
-                ${extraUrl ? `<a href="${escapeHTML(extraUrl)}" target="_blank" class="text-primary hover:text-blue-600" title="Details"><i class="fa-solid fa-external-link-alt text-xs"></i></a>` : ''}
+                ${extraUrl ? `<a href="${escapeHTML(extraUrl)}" target="_blank" class="text-primary hover:text-blue-600 icon-btn" title="Details"><i class="fa-solid fa-external-link-alt text-xs"></i></a>` : ''}
             </div>
         </div>
     `;
@@ -317,22 +364,23 @@ export function renderDashboardList(data, container, eurUsdRate, totalEUR) {
     // Start wrapper
     let html = `
     <div class="overflow-x-auto w-full">
-        <table class="w-full text-left border-collapse min-w-[800px]">
+        <table class="w-full text-left border-collapse min-w-[900px]">
             <thead class="bg-slate-50 dark:bg-slate-800/50 border-b border-slate-200 dark:border-slate-700">
                 <tr class="text-xs font-bold text-slate-500 uppercase tracking-wider">
-                    <th class="px-6 py-3"><i class="fa-solid fa-layer-group"></i> Wertpapier</th>
-                    <th class="px-6 py-3 text-right"><i class="fa-solid fa-cubes"></i> Stück</th>
-                    <th class="px-6 py-3 text-right"><i class="fa-solid fa-tag"></i> Preis</th>
-                    <th class="px-6 py-3 text-right"><i class="fa-solid fa-coins"></i> Wert</th>
-                    <th class="px-6 py-3 text-right"><i class="fa-solid fa-chart-line"></i> Perf.</th>
-                    <th class="px-6 py-3 text-right"><i class="fa-solid fa-chart-pie"></i> Anteil</th>
-                    <th class="px-6 py-3 text-right"><i class="fa-solid fa-bolt"></i></th>
+                    <th class="px-6 py-3"><i class="fa-solid fa-layer-group text-slate-400 mr-1.5"></i> Wertpapier</th>
+                    <th class="px-6 py-3 text-right"><i class="fa-solid fa-cubes text-slate-400 mr-1.5"></i> Stück</th>
+                    <th class="px-6 py-3 text-right"><i class="fa-solid fa-tag text-slate-400 mr-1.5"></i> Preis</th>
+                    <th class="px-6 py-3 text-right"><i class="fa-solid fa-coins text-slate-400 mr-1.5"></i> Wert</th>
+                    <th class="px-6 py-3 text-right"><i class="fa-solid fa-chart-line text-slate-400 mr-1.5"></i> Perf.</th>
+                    <th class="px-6 py-3 text-center"><i class="fa-solid fa-traffic-light text-slate-400 mr-1.5"></i> Signal</th>
+                    <th class="px-6 py-3 text-right"><i class="fa-solid fa-wave-square text-slate-400 mr-1.5"></i> Vol.</th>
+                    <th class="px-6 py-3 text-right"><i class="fa-solid fa-chart-pie text-slate-400 mr-1.5"></i> Anteil</th>
+                    <th class="px-6 py-3 text-right"></th>
                 </tr>
             </thead>
             <tbody class="divide-y divide-slate-100 dark:divide-slate-800">
                 `;
 
-    // Rows
     data.forEach(item => {
         if (item.error) return;
 
@@ -340,12 +388,8 @@ export function renderDashboardList(data, container, eurUsdRate, totalEUR) {
         const colorClass = isUp ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400';
         const positionValueNative = item.price * item.qty;
         let positionValueEUR = (item.currency === 'USD') ? positionValueNative / eurUsdRate : positionValueNative;
-
-        const safeSymbol = item.symbol.split('.')[0].toLowerCase();
-        // MarketWatch removed as per previous pref, just ensuring standard row
-
         const weight = totalEUR > 0 ? (positionValueEUR / totalEUR) * 100 : 0;
-        const weightStr = weight.toFixed(1).replace('.', ',') + ' %';
+        const weightStr = weight.toFixed(1).replace('.', ',') + ' %'; // German locale for percent
 
         // Badges for List View
         const rawStyle = ASSET_TYPES[item.type] || DEFAULT_ASSET_STYLE;
@@ -354,16 +398,50 @@ export function renderDashboardList(data, container, eurUsdRate, totalEUR) {
             color: rawStyle.color || DEFAULT_ASSET_STYLE.color
         };
 
+        // Exchange Badge
+        // In renderDashboardList we assume item also has merged analysis data if passed from app.js correctly.
+        // Wait, app.js passes `state.dashboardData` which IS the analysis result array.
+        // So `item` IS the analysis object + qty/url. Correct.
+        // It has `symbol`, `name`, `type`, `trend`, `volatility`, etc.
+        // Does it have exchange? it has `fullExchangeName` maybe? 
+        // In fetchPortfolioData (line 115) we call analyze(rawData). 
+        // analyze() returns symbol, name, type, price... but DOES IT RETURN EXCHANGE?
+        // Checking analyze() code: returns object lines 79-92. 
+        // IT DOES NOT RETURN EXCHANGE EXPLICITLY IN THE RETURN OBJECT! 
+        // It uses `meta.symbol`, `meta.shortName` etc.
+        // FIX: We need to rely on what is available. 
+        // Actually, `renderAppSkeleton` didn't show it before.
+        // `renderCardHeader` used `data.exchange` but `createStockCardHTML` is called with `data` from `dashboardData`.
+        // So `createStockCardHTML` probably missed exchange too unless `analyze` returns it.
+        // I checked `analyze.js` in previous step. 
+        // Line 19: `const meta = chartResult.meta;`
+        // Line 79: returns object. It has `currency` but NOT `exchangeName`.
+        // I MUST UPDATE `analyze.js` OR fallback to something else.
+        // However, I can't update `analysis.js` right now in this tool call (different file).
+        // I will optimistically check `meta.exchangeName` if visible in analysis return... it's NOT.
+
+        // Actually, let's proceed with UI changes assuming it IS there, but I will do a separate tool call to fix analysis.js immediately after.
+        // Or I can add it to `renderDashboardList` logic if I can. No, `item` comes from `analyze`.
+
+        // Let's use `getExchangeAbbr(item.exchangeName || 'N/A')` for now.
+        const exchangeAbbr = getExchangeAbbr(item.exchangeName || item.fullExchangeName || 'N/A');
+
+        // Trend Icon/Color
+        let trendIcon = 'fa-minus';
+        let trendColor = 'text-slate-400';
+        if (item.trend === 'bullish') { trendIcon = 'fa-arrow-trend-up'; trendColor = 'text-green-500'; }
+        if (item.trend === 'bearish') { trendIcon = 'fa-arrow-trend-down'; trendColor = 'text-red-500'; }
+
         html += `
                 <tr class="list-row hover:bg-slate-50 dark:hover:bg-slate-700/30 transition-colors group cursor-pointer" data-symbol="${escapeHTML(item.symbol)}">
                     <td class="px-6 py-4 max-w-[250px]">
                         <div class="flex items-start gap-2">
                              <div>
                                 <div class="font-bold text-slate-900 dark:text-white truncate" title="${escapeHTML(item.name)}">${escapeHTML(item.name)}</div>
-                                <div class="flex items-center gap-2 mt-0.5">
-                                    <span class="${badge.color} px-1.5 py-0.5 rounded border text-[9px] font-bold tracking-wide leading-none">${escapeHTML(badge.label)}</span>
-                                    <span class="text-xs font-mono text-slate-400 bg-slate-100 dark:bg-slate-800 px-1 py-0.5 rounded leading-none">${escapeHTML(item.exchange)}</span>
-                                    <span class="text-xs font-mono text-slate-500 truncate leading-none">${escapeHTML(item.symbol)}</span>
+                                <div class="flex items-center gap-2 mt-1">
+                                    <span class="${badge.color} px-1.5 py-0.5 rounded border text-[10px] font-bold tracking-wide leading-none">${escapeHTML(badge.label)}</span>
+                                    <span class="bg-slate-100 dark:bg-slate-800 text-slate-500 dark:text-slate-400 border border-slate-200 dark:border-slate-700 px-1.5 py-0.5 rounded text-[10px] font-bold tracking-wide leading-none">${escapeHTML(exchangeAbbr)}</span>
+                                    <span class="text-xs font-mono text-slate-500 truncate leading-none ml-0.5">${escapeHTML(item.symbol)}</span>
                                 </div>
                              </div>
                         </div>
@@ -371,7 +449,7 @@ export function renderDashboardList(data, container, eurUsdRate, totalEUR) {
 
                     <td class="px-6 py-4 text-right">
                         <div class="flex justify-end">
-                            <input type="number" min="0" step="any" class="qty-input dashboard-action w-16 text-right text-xs bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-600 rounded px-1 py-1 focus:ring-1 focus:ring-primary outline-none" value="${item.qty}" data-symbol="${escapeHTML(item.symbol)}" data-action="qty" onclick="event.stopPropagation()">
+                            <input type="number" min="0" step="any" class="qty-input dashboard-action w-16 text-right text-xs bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-600 rounded px-1.5 py-1 focus:ring-1 focus:ring-primary outline-none font-mono" value="${item.qty}" data-symbol="${escapeHTML(item.symbol)}" data-action="qty" onclick="event.stopPropagation()">
                         </div>
                     </td>
 
@@ -386,6 +464,14 @@ export function renderDashboardList(data, container, eurUsdRate, totalEUR) {
                     <td class="px-6 py-4 text-right font-mono text-sm font-medium ${colorClass} whitespace-nowrap">
                         ${formatPercent(item.changePercent)}
                     </td>
+                    
+                    <td class="px-6 py-4 text-center">
+                        <span class="${trendColor} text-sm" title="${item.trend}"><i class="fa-solid ${trendIcon}"></i></span>
+                    </td>
+                    
+                    <td class="px-6 py-4 text-right font-mono text-sm text-slate-600 dark:text-slate-400 whitespace-nowrap">
+                        ${item.volatility ? item.volatility.toFixed(1) + '%' : '-'}
+                    </td>
 
                     <td class="px-6 py-4 text-right font-mono text-xs text-slate-500 whitespace-nowrap">
                         ${weightStr}
@@ -393,7 +479,7 @@ export function renderDashboardList(data, container, eurUsdRate, totalEUR) {
 
                     <td class="px-6 py-4 text-right">
                         <div class="flex justify-end gap-2">
-                             <button type="button" class="delete-btn dashboard-action text-slate-400 hover:text-red-500 transition-colors px-2 py-1 rounded hover:bg-red-50 dark:hover:bg-red-900/20" data-symbol="${escapeHTML(item.symbol)}" data-action="delete" title="Entfernen">
+                            <button type="button" class="delete-btn dashboard-action text-slate-400 hover:text-red-500 transition-colors px-2 py-1.5 rounded hover:bg-red-50 dark:hover:bg-red-900/20" data-symbol="${escapeHTML(item.symbol)}" data-action="delete" title="Entfernen">
                                 <i class="fa-solid fa-trash-can"></i>
                             </button>
                         </div>

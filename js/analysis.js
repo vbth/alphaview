@@ -80,6 +80,7 @@ export function analyze(chartResult) {
         symbol: meta.symbol,
         name: fullName,
         type: type,
+        exchange: meta.exchangeName || meta.fullExchangeName || 'N/A',
         price: currentPrice,
         currency: meta.currency,
         change: change,
