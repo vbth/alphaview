@@ -6,6 +6,17 @@
 import { ASSET_TYPES, DEFAULT_ASSET_STYLE } from './config.js';
 
 /**
+ * Escapes HTML special characters to prevent XSS.
+ * @param {string} str - Unknown string input.
+ * @returns {string} Escaped string safe for innerHTML/attributes.
+ */
+export const escapeHTML = (str) => {
+    if (!str && str !== 0) return '';
+    return String(str).replace(/[&<>"']/g,
+        tag => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[tag]));
+};
+
+/**
  * Formatiert Geldbeträge lokalisiert.
  * Nutzt Intl.NumberFormat für korrekte Währungsdarstellung.
  * @param {number} val - Der Betrag.
@@ -135,7 +146,7 @@ export function createStockCardHTML(data, qty, url, extraUrl, totalPortfolioValu
     const weightPercent = totalPortfolioValueEUR > 0 ? (positionValueEUR / totalPortfolioValueEUR) * 100 : 0;
 
     return `
-        <div class="stock-card group relative bg-white dark:bg-dark-surface rounded-xl shadow-sm border border-slate-200 dark:border-slate-700 hover:shadow-lg hover:border-primary/50 dark:hover:border-neon-accent/50 transition-all duration-300 cursor-pointer overflow-hidden flex flex-col h-full" data-symbol="${data.symbol}">
+        <div class="stock-card group relative bg-white dark:bg-dark-surface rounded-xl shadow-sm border border-slate-200 dark:border-slate-700 hover:shadow-lg hover:border-primary/50 dark:hover:border-neon-accent/50 transition-all duration-300 cursor-pointer overflow-hidden flex flex-col h-full" data-symbol="${escapeHTML(data.symbol)}">
             <div class="p-5 flex flex-col flex-grow">
                 ${renderCardHeader(data)}
                 ${renderCardInfoBox(data, qty, url, extraUrl, positionValueNative, weightPercent)}
@@ -179,10 +190,10 @@ function renderCardHeader(data) {
     return `
         <div class="flex justify-between items-start mb-4 gap-4">
             <div class="flex-grow min-w-0 pr-2"> 
-                <h3 class="text-lg font-bold text-slate-900 dark:text-white tracking-tight truncate" title="${data.name}">${data.name}</h3>
+                <h3 class="text-lg font-bold text-slate-900 dark:text-white tracking-tight truncate" title="${escapeHTML(data.name)}">${escapeHTML(data.name)}</h3>
                 <div class="flex items-center gap-2 text-xs font-mono text-slate-500 mt-1">
-                    <span class="${tStyle.color} px-1.5 py-0.5 rounded border text-[10px] font-bold tracking-wide">${tStyle.label}</span>
-                    <span class="font-bold text-slate-700 dark:text-slate-300 ml-1">${data.symbol}</span>
+                    <span class="${tStyle.color} px-1.5 py-0.5 rounded border text-[10px] font-bold tracking-wide">${escapeHTML(tStyle.label)}</span>
+                    <span class="font-bold text-slate-700 dark:text-slate-300 ml-1">${escapeHTML(data.symbol)}</span>
                 </div>
             </div>
             <div class="text-right whitespace-nowrap pt-1 ml-auto">
@@ -251,14 +262,14 @@ function renderCardInfoBox(data, qty, url, extraUrl, positionValueNative, weight
 
             <div class="flex items-center gap-2 pt-1">
                 <i class="fa-solid fa-link text-slate-400 text-xs"></i>
-                <input type="text" class="url-input dashboard-action w-full text-xs bg-transparent border-none focus:ring-0 text-slate-600 dark:text-slate-400 placeholder-slate-400" value="${url || ''}" data-symbol="${data.symbol}" data-action="url" placeholder="Info-Link">
-                ${url ? `<a href="${url}" target="_blank" class="text-primary hover:text-blue-600" title="Öffnen"><i class="fa-solid fa-external-link-alt text-xs"></i></a>` : ''}
+                <input type="text" class="url-input dashboard-action w-full text-xs bg-transparent border-none focus:ring-0 text-slate-600 dark:text-slate-400 placeholder-slate-400" value="${escapeHTML(url || '')}" data-symbol="${escapeHTML(data.symbol)}" data-action="url" placeholder="Info-Link">
+                ${url ? `<a href="${escapeHTML(url)}" target="_blank" class="text-primary hover:text-blue-600" title="Öffnen"><i class="fa-solid fa-external-link-alt text-xs"></i></a>` : ''}
             </div>
 
             <div class="flex items-center gap-2 pt-1 mt-1 border-t border-slate-200 dark:border-slate-700">
                 <i class="fa-solid ${extraIcon} text-slate-400 text-xs w-4 text-center"></i>
-                <input type="text" class="extra-url-input dashboard-action w-full text-xs bg-transparent border-none focus:ring-0 text-slate-600 dark:text-slate-400 placeholder-slate-400" value="${extraUrl || ''}" data-symbol="${data.symbol}" data-action="extraUrl" placeholder="${extraPlaceholder}">
-                ${extraUrl ? `<a href="${extraUrl}" target="_blank" class="text-primary hover:text-blue-600" title="Details"><i class="fa-solid fa-external-link-alt text-xs"></i></a>` : ''}
+                <input type="text" class="extra-url-input dashboard-action w-full text-xs bg-transparent border-none focus:ring-0 text-slate-600 dark:text-slate-400 placeholder-slate-400" value="${escapeHTML(extraUrl || '')}" data-symbol="${escapeHTML(data.symbol)}" data-action="extraUrl" placeholder="${extraPlaceholder}">
+                ${extraUrl ? `<a href="${escapeHTML(extraUrl)}" target="_blank" class="text-primary hover:text-blue-600" title="Details"><i class="fa-solid fa-external-link-alt text-xs"></i></a>` : ''}
             </div>
         </div>
     `;
@@ -276,12 +287,12 @@ function renderCardFooter(data, isUp) {
         <div class="flex items-center justify-between text-xs text-slate-500 dark:text-slate-400 mt-auto border-t border-slate-50 dark:border-slate-800 pt-3">
             <div class="flex items-center gap-2">
                 ${(data.trend && data.volatility) ? `
-                <div class="flex items-center gap-1"><i class="fa-solid ${trendIcon}"></i> ${data.trend}</div>
+                <div class="flex items-center gap-1"><i class="fa-solid ${trendIcon}"></i> ${escapeHTML(data.trend)}</div>
                 <span class="text-slate-300 dark:text-slate-600">•</span>
                 <div class="flex items-center gap-1"><i class="fa-solid fa-wave-square"></i> Volatilität ${data.volatility.toFixed(1)}%</div>
                 ` : '<span></span>'}
             </div >
-    <button type="button" class="delete-btn dashboard-action text-slate-400 hover:text-red-500 transition-colors flex items-center gap-1.5 px-2 py-1 hover:bg-red-50 dark:hover:bg-red-900/20 rounded text-xs" data-symbol="${data.symbol}" data-action="delete" title="Entfernen">
+    <button type="button" class="delete-btn dashboard-action text-slate-400 hover:text-red-500 transition-colors flex items-center gap-1.5 px-2 py-1 hover:bg-red-50 dark:hover:bg-red-900/20 rounded text-xs" data-symbol="${escapeHTML(data.symbol)}" data-action="delete" title="Entfernen">
         <i class="fa-solid fa-trash-can"></i> Entfernen
     </button>
         </div >
@@ -299,7 +310,7 @@ export function renderDashboardList(data, container, eurUsdRate, totalEUR) {
 
     // Start wrapper
     let html = `
-    < div class="overflow-x-auto w-full" >
+    <div class="overflow-x-auto w-full">
         <table class="w-full text-left border-collapse min-w-[800px]">
             <thead class="bg-slate-50 dark:bg-slate-800/50 border-b border-slate-200 dark:border-slate-700">
                 <tr class="text-xs font-bold text-slate-500 uppercase tracking-wider">
@@ -330,10 +341,10 @@ export function renderDashboardList(data, container, eurUsdRate, totalEUR) {
         const weight = totalEUR > 0 ? (positionValueEUR / totalEUR) * 100 : 0;
 
         html += `
-                <tr class="list-row hover:bg-slate-50 dark:hover:bg-slate-700/30 transition-colors group cursor-pointer" data-symbol="${item.symbol}">
+                <tr class="list-row hover:bg-slate-50 dark:hover:bg-slate-700/30 transition-colors group cursor-pointer" data-symbol="${escapeHTML(item.symbol)}">
                     <td class="px-6 py-4 max-w-[200px]">
-                        <div class="font-bold text-slate-900 dark:text-white truncate" title="${item.name}">${item.name}</div>
-                        <div class="text-xs font-mono text-slate-500 truncate">${item.symbol}</div>
+                        <div class="font-bold text-slate-900 dark:text-white truncate" title="${escapeHTML(item.name)}">${escapeHTML(item.name)}</div>
+                        <div class="text-xs font-mono text-slate-500 truncate">${escapeHTML(item.symbol)}</div>
                     </td>
 
                     <td class="px-6 py-4 text-right font-mono text-sm text-slate-700 dark:text-slate-300 whitespace-nowrap">
@@ -356,13 +367,13 @@ export function renderDashboardList(data, container, eurUsdRate, totalEUR) {
 
                     <td class="px-6 py-4 text-right">
                         <div class="flex justify-end">
-                            <input type="number" min="0" step="any" class="qty-input dashboard-action w-16 text-right text-xs bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-600 rounded px-1 py-1 focus:ring-1 focus:ring-primary outline-none" value="${item.qty}" data-symbol="${item.symbol}" data-action="qty" onclick="event.stopPropagation()">
+                            <input type="number" min="0" step="any" class="qty-input dashboard-action w-16 text-right text-xs bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-600 rounded px-1 py-1 focus:ring-1 focus:ring-primary outline-none" value="${item.qty}" data-symbol="${escapeHTML(item.symbol)}" data-action="qty" onclick="event.stopPropagation()">
                         </div>
                     </td>
 
                     <td class="px-6 py-4 text-right">
                         <div class="flex justify-end gap-2">
-                            <button type="button" class="delete-btn dashboard-action text-slate-400 hover:text-red-500 transition-colors px-2 py-1 rounded hover:bg-red-50 dark:hover:bg-red-900/20" data-symbol="${item.symbol}" data-action="delete" title="Entfernen">
+                            <button type="button" class="delete-btn dashboard-action text-slate-400 hover:text-red-500 transition-colors px-2 py-1 rounded hover:bg-red-50 dark:hover:bg-red-900/20" data-symbol="${escapeHTML(item.symbol)}" data-action="delete" title="Entfernen">
                                 <i class="fa-solid fa-trash-can"></i>
                             </button>
                         </div>
@@ -386,24 +397,24 @@ export function renderDashboardList(data, container, eurUsdRate, totalEUR) {
  */
 export function createErrorCardHTML(symbol, msg) {
     return `
-    < div class="stock-card relative bg-red-50 dark:bg-red-900/10 rounded-xl shadow-sm border border-red-200 dark:border-red-800 p-5 flex flex-col justify-between" data - symbol="${symbol}" style = "min-height: 200px;" >
+    <div class="stock-card relative bg-red-50 dark:bg-red-900/10 rounded-xl shadow-sm border border-red-200 dark:border-red-800 p-5 flex flex-col justify-between" data-symbol="${escapeHTML(symbol)}" style="min-height: 200px;">
             <div>
                 <div class="flex justify-between items-start mb-2">
-                    <h3 class="text-lg font-bold text-red-700 dark:text-red-400 tracking-tight">${symbol}</h3>
+                    <h3 class="text-lg font-bold text-red-700 dark:text-red-400 tracking-tight">${escapeHTML(symbol)}</h3>
                     <i class="fa-solid fa-triangle-exclamation text-red-400"></i>
                 </div>
                 <p class="text-xs text-red-600 dark:text-red-300">Datenabruf fehlgeschlagen.</p>
-                <div class="text-[10px] font-mono mt-1 text-red-400 break-words">${msg || 'Timeout / Network Error'}</div>
+                <div class="text-[10px] font-mono mt-1 text-red-400 break-words">${escapeHTML(msg || 'Timeout / Network Error')}</div>
             </div>
             <div class="mt-4 border-t border-red-100 dark:border-red-800/50 pt-3 flex justify-between items-end">
-                 <button type="button" class="delete-btn dashboard-action text-red-400 hover:text-red-600 transition-colors flex items-center gap-1.5 px-2 py-1 hover:bg-red-100 dark:hover:bg-red-900/30 rounded text-xs" data-symbol="${symbol}" data-action="delete">
+                 <button type="button" class="delete-btn dashboard-action text-red-400 hover:text-red-600 transition-colors flex items-center gap-1.5 px-2 py-1 hover:bg-red-100 dark:hover:bg-red-900/30 rounded text-xs" data-symbol="${escapeHTML(symbol)}" data-action="delete">
                     <i class="fa-solid fa-trash-can"></i> Entfernen
                 </button>
-                <button type="button" class="dashboard-action text-red-500 hover:text-red-700 bg-red-100 dark:bg-red-900/40 hover:bg-red-200 dark:hover:bg-red-900/60 transition-colors flex items-center gap-1.5 px-3 py-1 rounded text-xs font-bold" data-symbol="${symbol}" data-action="retry">
+                <button type="button" class="dashboard-action text-red-500 hover:text-red-700 bg-red-100 dark:bg-red-900/40 hover:bg-red-200 dark:hover:bg-red-900/60 transition-colors flex items-center gap-1.5 px-3 py-1 rounded text-xs font-bold" data-symbol="${escapeHTML(symbol)}" data-action="retry">
                     <i class="fa-solid fa-rotate-right"></i> Retry
                 </button>
             </div>
-        </div >
+        </div>
     `;
 }
 
@@ -427,15 +438,15 @@ export function renderSearchResults(results, container) {
         };
 
         return `
-    < div class="search-item px-4 py-3 hover:bg-slate-50 dark:hover:bg-slate-700/50 cursor-pointer border-b border-slate-100 dark:border-slate-700 last:border-0 transition-colors group" data - symbol="${item.symbol}" >
+    <div class="search-item px-4 py-3 hover:bg-slate-50 dark:hover:bg-slate-700/50 cursor-pointer border-b border-slate-100 dark:border-slate-700 last:border-0 transition-colors group" data-symbol="${escapeHTML(item.symbol)}">
         <div class="flex justify-between items-center">
             <div class="flex-grow min-w-0 mr-4">
-                <div class="flex items-center gap-2 mb-0.5"><span class="font-bold text-slate-900 dark:text-white text-sm whitespace-nowrap">${item.symbol}</span><span class="text-[10px] font-bold px-1.5 py-0.5 rounded ${badge.color}">${badge.label}</span></div>
-                <div class="text-xs text-slate-500 truncate" title="${item.name}">${item.name}</div>
+                <div class="flex items-center gap-2 mb-0.5"><span class="font-bold text-slate-900 dark:text-white text-sm whitespace-nowrap">${escapeHTML(item.symbol)}</span><span class="text-[10px] font-bold px-1.5 py-0.5 rounded ${badge.color}">${escapeHTML(badge.label)}</span></div>
+                <div class="text-xs text-slate-500 truncate" title="${escapeHTML(item.name)}">${escapeHTML(item.name)}</div>
             </div>
-            <div class="text-xs font-mono bg-slate-100 dark:bg-slate-700 text-slate-500 px-2 py-1 rounded whitespace-nowrap group-hover:bg-white dark:group-hover:bg-slate-600 transition-colors">${item.exchange}</div>
+            <div class="text-xs font-mono bg-slate-100 dark:bg-slate-700 text-slate-500 px-2 py-1 rounded whitespace-nowrap group-hover:bg-white dark:group-hover:bg-slate-600 transition-colors">${escapeHTML(item.exchange)}</div>
         </div>
-        </div >
+        </div>
     `}).join('');
     container.classList.remove('hidden');
 }
