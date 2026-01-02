@@ -139,63 +139,47 @@ export function renderAppSkeleton(container) {
  * @param {number} eurUsdRate - Aktueller EUR/USD Wechselkurs.
  * @returns {string} Der HTML-String der Karte.
  */
+// Helper für Börsen-Kürzel
+function getExchangeAbbr(exchange) {
+    if (!exchange) return 'N/A';
+    const map = {
+        'Nms': 'NAS', 'NasdaqNM': 'NAS', 'Nasdaq': 'NAS', 'Ncm': 'NAS',
+        'Nyg': 'NYS', 'Nyse': 'NYS', 'New York Stock Exchange': 'NYS',
+        'Ger': 'XET', 'Xetra': 'XET', 'Dusseldorf': 'DUS', 'Stuttgart': 'STU',
+        'Munich': 'MUN', 'Berlin': 'BER', 'Hamburg': 'HAM', 'Hannover': 'HAN',
+        'Paris': 'PAR', 'Amsterdam': 'AMS', 'Brussels': 'BRU', 'London': 'LON',
+        'Swiss': 'SWI', 'Vienna': 'VIE', 'Milan': 'MIL', 'Madrid': 'MAD'
+    };
+    return map[exchange] || exchange.substring(0, 3).toUpperCase();
+}
+
+/**
+ * Erstellt das HTML für eine einzelne Aktien-Karte (Stock Card).
+ * Berechnet Positionswerte und Gewichtung für die Anzeige.
+ * @param {Object} data - Das Analysedaten-Objekt des Assets.
+ * @param {number} qty - Die gehaltene Stückzahl.
+ * @param {string} url - Benutzerdefinierter Info-Link.
+ * @param {string} extraUrl - Zweiter Benutzer-Link.
+ * @param {number} totalPortfolioValueEUR - Gesamtwert des Portfolios (für %-Anteil).
+ * @param {number} eurUsdRate - Aktueller EUR/USD Wechselkurs.
+ * @returns {string} Der HTML-String der Karte.
+ */
 export function createStockCardHTML(data, qty, url, extraUrl, totalPortfolioValueEUR, eurUsdRate) {
     const isUp = data.change >= 0;
     const positionValueNative = data.price * qty;
     let positionValueEUR = (data.currency === 'USD') ? positionValueNative / eurUsdRate : positionValueNative;
     const weightPercent = totalPortfolioValueEUR > 0 ? (positionValueEUR / totalPortfolioValueEUR) * 100 : 0;
 
-    // Helper für Börsen-Kürzel
-    function getExchangeAbbr(exchange) {
-        if (!exchange) return 'N/A';
-        const map = {
-            'Nms': 'NAS', 'NasdaqNM': 'NAS', 'Nasdaq': 'NAS', 'Ncm': 'NAS',
-            'Nyg': 'NYS', 'Nyse': 'NYS', 'New York Stock Exchange': 'NYS',
-            'Ger': 'XET', 'Xetra': 'XET', 'Dusseldorf': 'DUS', 'Stuttgart': 'STU',
-            'Munich': 'MUN', 'Berlin': 'BER', 'Hamburg': 'HAM', 'Hannover': 'HAN',
-            'Paris': 'PAR', 'Amsterdam': 'AMS', 'Brussels': 'BRU', 'London': 'LON',
-            'Swiss': 'SWI', 'Vienna': 'VIE', 'Milan': 'MIL', 'Madrid': 'MAD'
-        };
-        return map[exchange] || exchange.substring(0, 3).toUpperCase();
-    }
-
-    /**
-     * Erstellt das HTML für eine einzelne Aktien-Karte.
-     * @param {Object} data - Analysedaten.
-     * @returns {string} HTML-String.
-     */
-    export function createStockCardHTML(data, qty, url, extraUrl) {
-        const isUp = data.change >= 0;
-
-        // Calculate Value
-        const currentPriceAPI = data.price;
-        const positionValueNative = currentPriceAPI * qty;
-
-        // Weight (wird hier nicht direkt berechnet, da wir totalPortfolioValueEUR brauchen)
-        // Wir übergeben weightPercent als Argument wenn verfügbar, sonst 0.
-        // Hack: Wir holen uns totalPortfolioValueEUR aus argumenten? 
-        // Nein, ui.js signature ist fest. Wir berechnen es in app.js oder übergeben es hier nicht.
-        // wait, createStockCardHTML wird in renderDashboardGrid aufgerufen.
-        // dort haben wir totalPortfolioValueEUR.
-
-        // FIX: createStockCardHTML signature update needed in renderDashboardGrid loop to pass total value?
-        // Current signature: (data, qty, url, extraUrl, positionValueNative? no)
-        // Actually renderDashboardGrid calculates totals. 
-        // Let's modify renderDashboardGrid to pass weight.
-        // BUT user didn't ask to change logic/signatures heavily, just UI.
-        // We already have renderCardInfoBox receiving weightPercent.
-
-        return `
+    return `
         <div class="stock-card group relative bg-white dark:bg-dark-surface rounded-xl shadow-sm border border-slate-200 dark:border-slate-700 hover:shadow-lg hover:border-primary/50 dark:hover:border-neon-accent/50 transition-all duration-300 cursor-pointer overflow-hidden flex flex-col h-full" data-symbol="${escapeHTML(data.symbol)}">
             <div class="p-5 flex flex-col flex-grow">
                 ${renderCardHeader(data)}
-                ${renderCardInfoBox(data, qty, url, extraUrl)}
+                ${renderCardInfoBox(data, qty, url, extraUrl, positionValueNative, weightPercent)}
                 ${renderCardFooter(data, isUp)}
             </div>
             <div class="h-1 w-full ${isUp ? 'bg-green-500' : 'bg-red-500'}"></div>
         </div>
     `;
-    }
 }
 
 /**
