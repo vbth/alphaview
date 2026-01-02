@@ -294,7 +294,7 @@ function renderCardFooter(data, isUp) {
  * @param {HTMLElement} container - Der Grid-Container (wird hier für Liste umfunktioniert).
  * @param {number} eurUsdRate - Wechselkurs.
  */
-export function renderDashboardList(data, container, eurUsdRate) {
+export function renderDashboardList(data, container, eurUsdRate, totalEUR) {
     container.className = 'flex flex-col bg-white dark:bg-dark-surface rounded-xl shadow-sm border border-slate-200 dark:border-slate-700 overflow-hidden';
 
     // Start wrapper
