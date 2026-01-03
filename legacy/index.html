@@ -1,0 +1,210 @@
+<!DOCTYPE html>
+<html lang="de" class="antialiased">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AlphaView</title>
+    <link rel="icon" href="data:;base64,iVBORw0KGgo=">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: { colors: { primary: '#2563eb', 'dark-bg': '#0f172a', 'dark-surface': '#1e293b', 'neon-accent': '#22d3ee' }, fontFamily: { sans: ['Inter', 'ui-sans-serif', 'system-ui', 'sans-serif'] } }
+            }
+        }
+    </script>
+    <style>
+        body {
+            transition: background-color 0.3s ease, color 0.3s ease;
+            font-feature-settings: "tnum";
+            font-variant-numeric: tabular-nums;
+        }
+
+        .no-scrollbar::-webkit-scrollbar {
+            display: none;
+        }
+
+        .no-scrollbar {
+            -ms-overflow-style: none;
+            scrollbar-width: none;
+        }
+
+        input::-webkit-outer-spin-button,
+        input::-webkit-inner-spin-button {
+            -webkit-appearance: none;
+            margin: 0;
+        }
+
+        input[type=number] {
+            -moz-appearance: textfield;
+        }
+    </style>
+</head>
+
+<body class="bg-slate-50 text-slate-900 dark:bg-dark-bg dark:text-slate-100 flex flex-col min-h-screen">
+
+    <script>window.addEventListener('error', e => console.error(e.error));</script>
+
+    <header
+        class="w-full bg-white dark:bg-dark-surface shadow-sm border-b border-slate-200 dark:border-slate-700 sticky top-0 z-50">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between gap-4">
+
+            <!-- Logo Bereich -->
+            <div class="flex items-center gap-2 flex-shrink-0">
+                <i class="fa-solid fa-chart-line text-primary dark:text-neon-accent text-xl"></i>
+                <h1 class="text-xl font-bold tracking-tight">Alpha<span
+                        class="text-primary dark:text-neon-accent">View</span></h1>
+            </div>
+
+            <!-- Suche & Steuerelemente -->
+            <div class="flex items-center gap-3 flex-grow justify-end max-w-xl">
+                <div class="relative w-full max-w-sm">
+                    <!-- Suche Feld Styling (Darkmode angepasst an Quantity-Feld) -->
+                    <input type="text" id="header-search-input"
+                        class="w-full bg-white dark:bg-slate-700 border border-slate-200 dark:border-slate-600 text-slate-900 dark:text-white rounded-full pl-9 pr-4 py-1.5 text-sm focus:ring-2 focus:ring-primary outline-none transition-all placeholder-slate-400"
+                        placeholder="Suche..." autocomplete="off">
+                    <i class="fa-solid fa-magnifying-glass absolute left-3 top-2.5 text-slate-400 text-xs"></i>
+
+                    <!-- Suchergebnisse Dropdown -->
+                    <div id="header-search-results"
+                        class="hidden absolute top-full left-0 w-full bg-white dark:bg-slate-700 mt-2 rounded-lg shadow-xl border border-slate-200 dark:border-slate-700 overflow-hidden max-h-80 overflow-y-auto z-50">
+                    </div>
+                </div>
+
+                <button id="theme-toggle"
+                    class="p-2 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-700 transition-colors flex-shrink-0"><i
+                        class="fa-solid fa-moon"></i></button>
+            </div>
+        </div>
+    </header>
+
+    <main class="flex-grow w-full max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        <div id="app-root">
+            <div id="loading-spinner" class="flex flex-col items-center justify-center h-64 space-y-4">
+                <div class="animate-spin rounded-full h-12 w-12 border-b-2 border-primary dark:border-neon-accent">
+                </div>
+                <p class="text-slate-500 dark:text-slate-400 text-sm animate-pulse">Lade System...</p>
+            </div>
+        </div>
+    </main>
+
+    <!-- Detail-Modal für Charts -->
+    <div id="chart-modal" class="fixed inset-0 z-50 hidden" aria-labelledby="modal-title" role="dialog"
+        aria-modal="true">
+        <div class="fixed inset-0 bg-slate-900/75 backdrop-blur-sm transition-opacity"></div>
+        <div class="fixed inset-0 z-10 overflow-y-auto">
+            <div class="flex min-h-full items-end justify-center p-4 text-center sm:items-center sm:p-0">
+                <div
+                    class="relative transform overflow-hidden rounded-lg bg-white dark:bg-dark-surface text-left shadow-xl transition-all sm:my-8 sm:w-full sm:max-w-5xl border border-slate-200 dark:border-slate-700 flex flex-col">
+                    <div class="absolute top-4 right-4 z-20">
+                        <button type="button" id="close-modal"
+                            class="text-slate-400 hover:text-slate-500 focus:outline-none"><i
+                                class="fa-solid fa-xmark text-2xl"></i></button>
+                    </div>
+                    <div class="p-6">
+                        <div class="flex flex-col gap-4 mb-4 pr-8">
+                            <div>
+                                <h3 class="text-2xl font-bold text-slate-900 dark:text-white leading-tight break-words"
+                                    id="modal-fullname">Lade Titel...</h3>
+                                <div
+                                    class="flex flex-wrap gap-2 mt-3 text-xs font-mono text-slate-500 dark:text-slate-400 items-center">
+                                    <span
+                                        class="bg-slate-100 dark:bg-slate-800 px-2 py-1 rounded border border-slate-200 dark:border-slate-600">SYMBOL:
+                                        <strong id="modal-symbol"
+                                            class="text-slate-900 dark:text-slate-200">---</strong></span>
+                                    <span
+                                        class="bg-slate-100 dark:bg-slate-800 px-2 py-1 rounded border border-slate-200 dark:border-slate-600">BÖRSE:
+                                        <strong id="modal-exchange"
+                                            class="text-slate-900 dark:text-slate-200">---</strong></span>
+                                    <span
+                                        class="bg-slate-100 dark:bg-slate-800 px-2 py-1 rounded border border-slate-200 dark:border-slate-600">TYP:
+                                        <strong id="modal-type"
+                                            class="text-slate-900 dark:text-slate-200">---</strong></span>
+                                    <span
+                                        class="bg-slate-100 dark:bg-slate-800 px-2 py-1 rounded border border-slate-200 dark:border-slate-600">ZEITRAUM:
+                                        <strong id="dynamic-range-text"
+                                            class="text-slate-900 dark:text-slate-200">...</strong></span>
+                                </div>
+                                <div
+                                    class="flex flex-wrap gap-2 mt-2 text-xs font-mono text-slate-500 dark:text-slate-400 items-center">
+                                    <span
+                                        class="bg-slate-100 dark:bg-slate-800 px-2 py-1 rounded border border-slate-200 dark:border-slate-600">PERFORMANCE:
+                                        <strong id="chart-performance">...</strong></span>
+                                    <span
+                                        class="bg-slate-100 dark:bg-slate-800 px-2 py-1 rounded border border-slate-200 dark:border-slate-600">VOLATILITÄT:
+                                        <strong id="modal-vol"
+                                            class="text-slate-900 dark:text-slate-200">---</strong></span>
+                                    <span
+                                        class="bg-slate-100 dark:bg-slate-800 px-2 py-1 rounded border border-slate-200 dark:border-slate-600">TREND:
+                                        <strong id="modal-trend"
+                                            class="text-slate-900 dark:text-slate-200">---</strong></span>
+                                </div>
+                            </div>
+                            <div class="w-full overflow-x-auto no-scrollbar pb-1">
+                                <div class="flex bg-white dark:bg-dark-surface p-1 rounded-lg border border-slate-200 dark:border-slate-700 shadow-sm gap-1 min-w-max"
+                                    id="chart-controls">
+                                    <button data-range="1d"
+                                        class="chart-range-btn px-4 py-1.5 text-xs font-bold rounded-md text-slate-500 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-700 transition-all">1T</button>
+                                    <button data-range="1W"
+                                        class="chart-range-btn px-4 py-1.5 text-xs font-bold rounded-md text-slate-500 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-700 transition-all">1W</button>
+                                    <button data-range="1mo"
+                                        class="chart-range-btn px-4 py-1.5 text-xs font-bold rounded-md text-slate-500 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-700 transition-all">1M</button>
+                                    <button data-range="6mo"
+                                        class="chart-range-btn px-4 py-1.5 text-xs font-bold rounded-md text-slate-500 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-700 transition-all">6M</button>
+                                    <button data-range="1y"
+                                        class="chart-range-btn px-4 py-1.5 text-xs font-bold rounded-md bg-slate-100 dark:bg-slate-600 text-primary dark:text-white transition-all">1J</button>
+                                    <button data-range="5y"
+                                        class="chart-range-btn px-4 py-1.5 text-xs font-bold rounded-md text-slate-500 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-700 transition-all">5J</button>
+                                    <button data-range="max"
+                                        class="chart-range-btn px-4 py-1.5 text-xs font-bold rounded-md text-slate-500 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-700 transition-all">MAX</button>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="w-full h-[400px] sm:h-[500px] relative bg-transparent rounded-lg border border-slate-100 dark:border-slate-800 overflow-hidden"
+                            id="main-chart-container">
+                            <div id="main-chart" class="w-full h-full"></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Footer Bereich -->
+    <footer class="bg-white dark:bg-dark-surface border-t border-slate-200 dark:border-slate-700 py-8 mt-auto">
+        <div class="max-w-7xl mx-auto px-4 flex flex-col items-center gap-4">
+            <!-- Einheitliche Aktions-Buttons -->
+            <div class="flex flex-col md:flex-row flex-wrap justify-center gap-3 w-full md:w-auto">
+                <button id="copy-list-btn"
+                    class="w-full md:w-auto justify-center text-xs font-medium text-slate-600 dark:text-slate-300 hover:text-primary dark:hover:text-neon-accent transition-colors flex items-center gap-2 border border-slate-200 dark:border-slate-700 px-4 py-3 md:py-2 rounded-full hover:bg-slate-50 dark:hover:bg-slate-800 shadow-sm"><i
+                        class="fa-solid fa-list-ol"></i> Liste kopieren</button>
+                <button id="copy-urls-btn"
+                    class="w-full md:w-auto justify-center text-xs font-medium text-slate-600 dark:text-slate-300 hover:text-primary dark:hover:text-neon-accent transition-colors flex items-center gap-2 border border-slate-200 dark:border-slate-700 px-4 py-3 md:py-2 rounded-full hover:bg-slate-50 dark:hover:bg-slate-800 shadow-sm"><i
+                        class="fa-solid fa-link"></i> Links kopieren</button>
+                <button id="export-btn"
+                    class="w-full md:w-auto justify-center text-xs font-medium text-slate-600 dark:text-slate-300 hover:text-primary dark:hover:text-neon-accent transition-colors flex items-center gap-2 border border-slate-200 dark:border-slate-700 px-4 py-3 md:py-2 rounded-full hover:bg-slate-50 dark:hover:bg-slate-800 shadow-sm"><i
+                        class="fa-solid fa-download"></i> Depot sichern</button>
+                <button id="import-btn"
+                    class="w-full md:w-auto justify-center text-xs font-medium text-slate-600 dark:text-slate-300 hover:text-primary dark:hover:text-neon-accent transition-colors flex items-center gap-2 border border-slate-200 dark:border-slate-700 px-4 py-3 md:py-2 rounded-full hover:bg-slate-50 dark:hover:bg-slate-800 shadow-sm"><i
+                        class="fa-solid fa-upload"></i> Depot laden</button>
+                <input type="file" id="import-input" class="hidden" accept=".json">
+            </div>
+            <div class="text-center text-xs text-slate-400 dark:text-slate-500">
+                <p>Local-First PWA running on GitHub Pages.</p>
+                <p class="mt-1">&copy; 2025 AlphaView Analytics.</p>
+            </div>
+        </div>
+    </footer>
+
+    <script
+        src="https://cdn.jsdelivr.net/npm/lightweight-charts@4.2.0/dist/lightweight-charts.standalone.production.js"></script>
+    <script type="module" src="js/app.js?v=7"></script>
+</body>
+
+</html>
