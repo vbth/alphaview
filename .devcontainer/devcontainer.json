@@ -1,4 +1,9 @@
 {
   "image": "mcr.microsoft.com/devcontainers/universal:2",
-  "features": {}
+  "features": {
+    "ghcr.io/wandb/catnip/feature:1": {}
+  },
+  "forwardPorts": [
+    6369
+  ]
 }
